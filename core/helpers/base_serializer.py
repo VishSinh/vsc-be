@@ -28,3 +28,21 @@ class BaseSerializer(serializers.Serializer):
             return self.validated_data[key]
         except KeyError:
             raise BadRequest(f"Missing required field: {key}")
+
+    @classmethod
+    def validate_request(cls, request):
+        """
+        Validate request data using this serializer class.
+
+        Args:
+            request: Django request object
+
+        Returns:
+            Validated serializer instance with get_value() method
+
+        Raises:
+            ValidationError: If validation fails
+        """
+        serializer = cls(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return serializer

@@ -61,7 +61,6 @@ class OrderItem(models.Model):
         decimal_places=PRICE_DECIMAL_PLACES,
         default=DEFAULT_AMOUNT,
     )
-    subtotal = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES)
     requires_box = models.BooleanField(default=False)
     requires_printing = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

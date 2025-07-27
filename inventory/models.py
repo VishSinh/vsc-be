@@ -43,7 +43,7 @@ class Card(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="cards")
     barcode = models.CharField(max_length=TEXT_LENGTH, unique=True)
-    base_price = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES)
+    sell_price = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES)
     cost_price = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES)
     max_discount = models.DecimalField(
         max_digits=TAX_MAX_DIGITS,
@@ -79,6 +79,7 @@ class InventoryTransaction(models.Model):
     card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name="inventory_transactions")
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name="inventory_transactions")
     transaction_type = models.CharField(max_length=STATUS_LENGTH, choices=TransactionType.choices)
+    order_item = models.ForeignKey("orders.OrderItem", on_delete=models.CASCADE, related_name="inventory_transactions", null=True, blank=True)
     quantity_changed = models.IntegerField()
     cost_price = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES)
     notes = models.TextField(blank=True)

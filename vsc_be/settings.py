@@ -16,13 +16,15 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # Custom apps
+    # Django Apps
     "core",
     "accounts",
     "inventory",
     "orders",
     "production",
     "auditing",
+    # Third Party Apps
+    "django_extensions",
 ]
 
 AUTH_USER_MODEL = "accounts.Staff"
@@ -114,3 +116,6 @@ SKIP_AUTH_PATTERNS = [
     # Authentication endpoints
     "/api/v1/auth/login/",
 ]
+
+
+TAX_PERCENTAGE = 0

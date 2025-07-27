@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from core.constants import NAME_LENGTH, PHONE_LENGTH, PRICE_DECIMAL_PLACES, PRICE_MAX_DIGITS
 from core.helpers.base_serializer import BaseSerializer
+from core.helpers.param_serializer import ParamSerializer
 
 
 class VendorSerializer(BaseSerializer):
@@ -35,3 +36,22 @@ class CardSerializer(BaseSerializer):
 
 class CardPurchaseSerializer(BaseSerializer):
     quantity = serializers.IntegerField(required=True, min_value=0)
+
+
+# Parameter Serializers
+class CardQueryParams(ParamSerializer):
+    """Serializer for card query parameters"""
+
+    card_id = serializers.UUIDField(required=True)
+
+
+class CardSimilarityParams(ParamSerializer):
+    """Serializer for card similarity query parameters"""
+
+    image = serializers.URLField(required=True)
+
+
+class VendorQueryParams(ParamSerializer):
+    """Serializer for vendor query parameters"""
+
+    vendor_id = serializers.UUIDField(required=True)

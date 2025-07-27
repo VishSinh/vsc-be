@@ -1,8 +1,8 @@
 from django.db import transaction
 from django.utils import timezone
 
-from accounts.models import Staff
-from core.exceptions import ResourceNotFound, Unauthorized
+from accounts.models import Customer, Staff
+from core.exceptions import Conflict, ResourceNotFound, Unauthorized
 from core.helpers.security import Security
 
 
@@ -67,3 +67,29 @@ class StaffService:
         if not staff:
             raise ResourceNotFound("Staff member not found")
         return staff
+
+
+class CustomerService:
+    @staticmethod
+    def create_customer(name, phone):
+        if CustomerService.check_customer_exists_by_phone(phone=phone):
+            raise Conflict("Customer already exists")
+
+        customer = Customer.objects.create(name=name, phone=phone)
+        return customer
+
+    @staticmethod
+    def get_customer_by_phone(phone):
+        if not (customer := Customer.objects.filter(phone=phone, is_active=True).first()):
+            raise ResourceNotFound("Customer not found")
+        return customer
+
+    @staticmethod
+    def get_customer_by_id(customer_id):
+        if not (customer := Customer.objects.filter(id=customer_id, is_active=True).first()):
+            raise ResourceNotFound("Customer not found")
+        return customer
+
+    @staticmethod
+    def check_customer_exists_by_phone(phone):
+        return Customer.objects.filter(phone=phone, is_active=True).exists()

@@ -1,6 +1,6 @@
 from django.db import transaction
 
-from core.exceptions import ResourceNotFound
+from core.exceptions import Conflict, ResourceNotFound
 from core.helpers.image_utils import ImageUtils
 from inventory.models import Card, InventoryTransaction, Vendor
 
@@ -8,8 +8,7 @@ from inventory.models import Card, InventoryTransaction, Vendor
 class CardService:
     @staticmethod
     def get_card_by_id(card_id):
-        card = Card.objects.filter(id=card_id).first()
-        if not card:
+        if not (card := Card.objects.filter(id=card_id).first()):
             raise ResourceNotFound("Card not found")
 
         return card
@@ -24,7 +23,7 @@ class CardService:
         barcode = ImageUtils.generate_unique_barcode("CARD", Card)
         perceptual_hash = ImageUtils.generate_perceptual_hash(image)
 
-        vendor = Vendor.objects.get(id=vendor_id)
+        vendor = VendorService.get_vendor_by_id(vendor_id)
 
         # 2. Create the card instance
         card = Card.objects.create(
@@ -39,14 +38,7 @@ class CardService:
         )
 
         # 3. Create the initial inventory transaction to log the purchase
-        InventoryTransaction.objects.create(
-            card=card,
-            staff=staff,
-            transaction_type=InventoryTransaction.TransactionType.PURCHASE,
-            quantity_changed=quantity,
-            cost_price=cost_price,
-            notes="Initial stock",
-        )
+        InventoryTransactionService.record_purchase_transaction(card, quantity, staff)
 
         return card
 
@@ -68,25 +60,54 @@ class CardService:
         if not card:
             raise ResourceNotFound("Card not found")
 
-        # 1. Update the card's quantity
         card.quantity += quantity_change
         card.save()
 
-        # 2. Create the transaction log
-        InventoryTransaction.objects.create(
-            card=card,
-            staff=staff,
-            transaction_type=InventoryTransaction.TransactionType.PURCHASE,
-            quantity_changed=quantity_change,
-            cost_price=card.cost_price,
-            notes="Additional stock purchase",
-        )
+        InventoryTransactionService.record_purchase_transaction(card, quantity_change, staff)
 
         return card
 
 
+class InventoryTransactionService:
+    @staticmethod
+    def record_purchase_transaction(card, quantity, staff):
+        InventoryTransaction.objects.create(
+            card=card,
+            staff=staff,
+            transaction_type=InventoryTransaction.TransactionType.PURCHASE,
+            quantity_changed=quantity,
+            cost_price=card.cost_price,
+            notes="Initial stock",
+        )
+
+    @staticmethod
+    def record_sale_transaction(card, quantity, staff):
+        InventoryTransaction.objects.create(
+            card=card,
+            staff=staff,
+            transaction_type=InventoryTransaction.TransactionType.SALE,
+            quantity_changed=-quantity,
+            cost_price=card.cost_price,
+            notes="Sale",
+        )
+
+
 class VendorService:
     @staticmethod
+    def get_vendor_by_id(vendor_id):
+        if not (vendor := Vendor.objects.filter(id=vendor_id).first()):
+            raise ResourceNotFound("Vendor not found")
+
+        return vendor
+
+    @staticmethod
     def create_vendor(name, phone):
+        if VendorService.check_vendor_exists_by_phone(phone):
+            raise Conflict("Vendor with this phone number already exists")
+
         vendor = Vendor.objects.create(name=name, phone=phone)
         return vendor
+
+    @staticmethod
+    def check_vendor_exists_by_phone(phone):
+        return Vendor.objects.filter(phone=phone).exists()

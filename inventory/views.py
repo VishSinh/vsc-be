@@ -3,8 +3,7 @@ from rest_framework.views import APIView
 from core.authorization import Permission, require_permission
 from core.decorators import forge
 from core.utils import model_unwrap
-from inventory.models import Card
-from inventory.serializers import CardPurchaseSerializer, CardSerializer, VendorSerializer
+from inventory.serializers import CardPurchaseSerializer, CardQueryParams, CardSerializer, CardSimilarityParams, VendorSerializer
 from inventory.services import CardService, VendorService
 
 
@@ -12,13 +11,9 @@ class VendorView(APIView):
     @forge
     @require_permission(Permission.VENDOR_CREATE)
     def post(self, request):
-        serializer = VendorSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        body = VendorSerializer.validate_request(request)
 
-        name = serializer.get_value("name")
-        phone = serializer.get_value("phone")
-
-        VendorService.create_vendor(name=name, phone=phone)
+        VendorService.create_vendor(name=body.get_value("name"), phone=body.get_value("phone"))
 
         return {"message": "Vendor created successfully"}
 
@@ -31,22 +26,23 @@ class CardView(APIView):
             card = CardService.get_card_by_id(card_id)
             return model_unwrap(card)
 
-        return model_unwrap(Card.objects.all())
+        params = CardQueryParams.validate_params(request)
+        card = CardService.get_card_by_id(params.get_value("card_id"))
+        return model_unwrap(card)
 
     @forge
     @require_permission(Permission.CARD_CREATE)
     def post(self, request):
-        serializer = CardSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        body = CardSerializer.validate_request(request)
 
         CardService.create_card(
-            vendor_id=serializer.get_value("vendor_id"),
+            vendor_id=body.get_value("vendor_id"),
             staff=request.staff,
-            image=serializer.get_value("image"),
-            cost_price=serializer.get_value("cost_price"),
-            base_price=serializer.get_value("base_price"),
-            max_discount=serializer.get_value("max_discount"),
-            quantity=serializer.get_value("quantity"),
+            image=body.get_value("image"),
+            cost_price=body.get_value("cost_price"),
+            base_price=body.get_value("base_price"),
+            max_discount=body.get_value("max_discount"),
+            quantity=body.get_value("quantity"),
         )
 
         return {"message": "Card created successfully"}
@@ -55,9 +51,9 @@ class CardView(APIView):
 class CardSimilarityView(APIView):
     @forge
     def get(self, request):
-        image = request.query_params.get("image")
-        cards = CardService.find_similar_cards(image)
+        params = CardSimilarityParams.validate_params(request)
 
+        cards = CardService.find_similar_cards(params.get_value("image"))
         return model_unwrap(cards)
 
 
@@ -65,10 +61,9 @@ class CardPurchaseView(APIView):
     @forge
     @require_permission(Permission.CARD_UPDATE)
     def patch(self, request, card_id):
-        serializer = CardPurchaseSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        body = CardPurchaseSerializer.validate_request(request)
 
-        quantity = serializer.get_value("quantity")
+        quantity = body.get_value("quantity")
 
         CardService.purchase_additional_stock(card_id=card_id, quantity_change=quantity, staff=request.staff)
 

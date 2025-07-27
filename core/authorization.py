@@ -73,6 +73,13 @@ class Permission:
     CARD_DELETE = "card.delete"
     CARD_LIST = "card.list"
 
+    # Customer Management
+    CUSTOMER_CREATE = "customer.create"
+    CUSTOMER_READ = "customer.read"
+    CUSTOMER_UPDATE = "customer.update"
+    CUSTOMER_DELETE = "customer.delete"
+    CUSTOMER_LIST = "customer.list"
+
     # System Management
     SYSTEM_CONFIG = "system.config"
     SYSTEM_BACKUP = "system.backup"
