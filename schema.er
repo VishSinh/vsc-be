@@ -1,0 +1,158 @@
+[alembic_version]
+    *version_num {label:"VARCHAR(32)"}
+[audit_logs]
+    *id {label:"UUID"}
+    action {label:"VARCHAR(20)"}
+    created_at {label:"TIMESTAMP"}
+    new_values {label:"TEXT"}
+    old_values {label:"TEXT"}
+    record_id {label:"UUID"}
+    staff_id {label:"UUID"}
+    table_name {label:"VARCHAR(50)"}
+[staff]
+    *id {label:"UUID"}
+    created_at {label:"TIMESTAMP"}
+    is_active {label:"BOOLEAN"}
+    last_login {label:"TIMESTAMP"}
+    name {label:"VARCHAR(100)"}
+    password_hash {label:"VARCHAR(255)"}
+    phone {label:"VARCHAR(10)"}
+    role {label:"VARCHAR(7)"}
+    updated_at {label:"TIMESTAMP"}
+[orders]
+    *id {label:"UUID"}
+    created_at {label:"TIMESTAMP"}
+    customer_id {label:"UUID"}
+    delivery_date {label:"TIMESTAMP"}
+    order_date {label:"TIMESTAMP"}
+    order_status {label:"VARCHAR(11)"}
+    special_instruction {label:"TEXT"}
+    staff_id {label:"UUID"}
+    updated_at {label:"TIMESTAMP"}
+[customers]
+    *id {label:"UUID"}
+    created_at {label:"TIMESTAMP"}
+    is_active {label:"BOOLEAN"}
+    name {label:"VARCHAR(100)"}
+    phone {label:"VARCHAR(10)"}
+    updated_at {label:"TIMESTAMP"}
+[cards]
+    *id {label:"UUID"}
+    barcode {label:"VARCHAR(50)"}
+    base_price {label:"DOUBLE PRECISION"}
+    cost_price {label:"DOUBLE PRECISION"}
+    created_at {label:"TIMESTAMP"}
+    image {label:"VARCHAR(500)"}
+    is_active {label:"BOOLEAN"}
+    max_discount {label:"DOUBLE PRECISION"}
+    perceptual_hash {label:"VARCHAR(255)"}
+    quantity {label:"INTEGER"}
+    updated_at {label:"TIMESTAMP"}
+    vendor_id {label:"UUID"}
+[vendors]
+    *id {label:"UUID"}
+    created_at {label:"TIMESTAMP"}
+    is_active {label:"BOOLEAN"}
+    name {label:"VARCHAR(100)"}
+    phone {label:"VARCHAR(10)"}
+    updated_at {label:"TIMESTAMP"}
+[bills]
+    *id {label:"UUID"}
+    created_at {label:"TIMESTAMP"}
+    order_id {label:"UUID"}
+    payment_status {label:"VARCHAR(7)"}
+    tax_percentage {label:"DOUBLE PRECISION"}
+    updated_at {label:"TIMESTAMP"}
+[inventory_transactions]
+    *id {label:"UUID"}
+    card_id {label:"UUID"}
+    cost_price {label:"DOUBLE PRECISION"}
+    created_at {label:"TIMESTAMP"}
+    notes {label:"TEXT"}
+    quantity_changed {label:"INTEGER"}
+    staff_id {label:"UUID"}
+    transaction_type {label:"VARCHAR(8)"}
+[order_items]
+    *id {label:"UUID"}
+    card_id {label:"UUID"}
+    created_at {label:"TIMESTAMP"}
+    discount_amount {label:"DOUBLE PRECISION"}
+    order_id {label:"UUID"}
+    price_per_item {label:"DOUBLE PRECISION"}
+    quantity {label:"INTEGER"}
+    requires_box {label:"BOOLEAN"}
+    requires_printing {label:"BOOLEAN"}
+    subtotal {label:"DOUBLE PRECISION"}
+    updated_at {label:"TIMESTAMP"}
+[bill_adjustments]
+    *id {label:"UUID"}
+    adjustment_type {label:"VARCHAR(11)"}
+    amount {label:"DOUBLE PRECISION"}
+    bill_id {label:"UUID"}
+    created_at {label:"TIMESTAMP"}
+    reason {label:"TEXT"}
+    staff_id {label:"UUID"}
+[box_orders]
+    *id {label:"UUID"}
+    box_maker_id {label:"UUID"}
+    box_quantity {label:"INTEGER"}
+    box_status {label:"VARCHAR(11)"}
+    box_type {label:"VARCHAR(8)"}
+    created_at {label:"TIMESTAMP"}
+    order_item_id {label:"UUID"}
+    total_box_cost {label:"DOUBLE PRECISION"}
+    updated_at {label:"TIMESTAMP"}
+[box_makers]
+    *id {label:"UUID"}
+    created_at {label:"TIMESTAMP"}
+    is_active {label:"BOOLEAN"}
+    name {label:"VARCHAR(100)"}
+    phone {label:"VARCHAR(10)"}
+[printers]
+    *id {label:"UUID"}
+    created_at {label:"TIMESTAMP"}
+    is_active {label:"BOOLEAN"}
+    name {label:"VARCHAR(100)"}
+    phone {label:"VARCHAR(10)"}
+[tracing_studios]
+    *id {label:"UUID"}
+    created_at {label:"TIMESTAMP"}
+    is_active {label:"BOOLEAN"}
+    name {label:"VARCHAR(100)"}
+    phone {label:"VARCHAR(10)"}
+[payments]
+    *id {label:"UUID"}
+    amount {label:"DOUBLE PRECISION"}
+    bill_id {label:"UUID"}
+    created_at {label:"TIMESTAMP"}
+    notes {label:"TEXT"}
+    payment_mode {label:"VARCHAR(4)"}
+    transaction_ref {label:"VARCHAR(255)"}
+[printing_jobs]
+    *id {label:"UUID"}
+    created_at {label:"TIMESTAMP"}
+    estimated_completion {label:"TIMESTAMP"}
+    order_item_id {label:"UUID"}
+    print_quantity {label:"INTEGER"}
+    printer_id {label:"UUID"}
+    printing_status {label:"VARCHAR(11)"}
+    total_printing_cost {label:"DOUBLE PRECISION"}
+    tracing_studio_id {label:"UUID"}
+    updated_at {label:"TIMESTAMP"}
+staff."id" 1--* audit_logs."staff_id"
+staff."id" 1--* orders."staff_id"
+customers."id" 1--* orders."customer_id"
+vendors."id" 1--* cards."vendor_id"
+orders."id" 1--* bills."order_id"
+staff."id" 1--* inventory_transactions."staff_id"
+cards."id" 1--* inventory_transactions."card_id"
+orders."id" 1--* order_items."order_id"
+cards."id" 1--* order_items."card_id"
+staff."id" 1--* bill_adjustments."staff_id"
+bills."id" 1--* bill_adjustments."bill_id"
+box_makers."id" 1--* box_orders."box_maker_id"
+order_items."id" 1--* box_orders."order_item_id"
+bills."id" 1--* payments."bill_id"
+order_items."id" 1--* printing_jobs."order_item_id"
+printers."id" 1--* printing_jobs."printer_id"
+tracing_studios."id" 1--* printing_jobs."tracing_studio_id"

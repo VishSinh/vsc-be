@@ -1,0 +1,25 @@
+# Common field lengths
+PHONE_LENGTH = 10
+NAME_LENGTH = 100
+TEXT_LENGTH = 255
+LONG_TEXT_LENGTH = 500
+
+# Status field lengths (all status fields use similar lengths)
+STATUS_LENGTH = 11  # For most status fields
+SHORT_STATUS_LENGTH = 9  # For payment status
+PAYMENT_MODE_LENGTH = 4
+BOX_TYPE_LENGTH = 8
+ACTION_LENGTH = 20
+TABLE_NAME_LENGTH = 50
+
+# Decimal precision
+PRICE_MAX_DIGITS = 10
+PRICE_DECIMAL_PLACES = 2
+TAX_MAX_DIGITS = 5
+TAX_DECIMAL_PLACES = 2
+
+# Default values
+DEFAULT_QUANTITY = 0
+DEFAULT_AMOUNT = 0
+DEFAULT_TAX_PERCENTAGE = 0
+DEFAULT_ROLE = 'STAFF' 
