@@ -5,6 +5,7 @@ from accounts.models import Staff
 from core.exceptions import InternalServerError, Unauthorized
 from core.helpers.api_response import APIResponse
 from core.helpers.security import Security
+from uuid import UUID
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ class AuthMiddleware:
         try:
             if any(pattern in request.path for pattern in self.skip_auth_patterns):
                 return self.get_response(request)
+
             
             auth_header = request.headers.get('Authorization')
             if not auth_header or not auth_header.startswith('Bearer '):
@@ -25,21 +27,24 @@ class AuthMiddleware:
             
             token = auth_header.split(' ')[1]
             
-            try:
-                staff_id, expiry = Security.verify_token(token)
-            except ValueError as e:
-                raise Unauthorized(str(e))
-            
+            staff_id, expiry = Security.verify_token(token)
+            print(staff_id)
             staff = Staff.objects.filter(id=staff_id).first()
-            if not staff:
-                raise Unauthorized('Invalid user')
+            print(staff)
             
-            request.user_obj = staff
+            if not staff:
+                raise Unauthorized('Invalid Staff')
+            
+            request.staff = staff
+            request.is_authenticated = True
+
+            print(request.staff)
             
             return self.get_response(request)
         except Unauthorized as e:
+            print(e)
             return APIResponse(success=False, status_code=status.HTTP_401_UNAUTHORIZED, error=str(e)).response()
         except Exception as e:
-            logger.error(f"Auth middleware error: {str(e)}")
+            print(f"Auth middleware error: {str(e)}")
             return APIResponse(success=False, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, error=str(e)).response()
             

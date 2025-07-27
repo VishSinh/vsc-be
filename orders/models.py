@@ -10,21 +10,18 @@ from core.constants import (
 
 
 class Order(models.Model):
-    """Represents a complete customer order"""
     class OrderStatus(models.TextChoices):
-        PENDING = 'PENDING', 'Pending'
         CONFIRMED = 'CONFIRMED', 'Confirmed'
         IN_PROGRESS = 'IN_PROGRESS', 'In Progress'
         READY = 'READY', 'Ready'
         DELIVERED = 'DELIVERED', 'Delivered'
-        CANCELLED = 'CANCELLED', 'Cancelled'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='orders')
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='orders')
     order_date = models.DateTimeField(auto_now_add=True)
     delivery_date = models.DateTimeField(null=True, blank=True)
-    order_status = models.CharField(max_length=STATUS_LENGTH, choices=OrderStatus.choices, default=OrderStatus.PENDING)
+    order_status = models.CharField(max_length=STATUS_LENGTH, choices=OrderStatus.choices, default=OrderStatus.CONFIRMED)
     special_instruction = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -62,12 +59,10 @@ class OrderItem(models.Model):
 
 
 class Bill(models.Model):
-    """Financial summary and payment status for an order"""
     class PaymentStatus(models.TextChoices):
         PENDING = 'PENDING', 'Pending'
-        PAID = 'PAID', 'Paid'
         PARTIAL = 'PARTIAL', 'Partial'
-        CANCELLED = 'CANCELLED', 'Cancelled'
+        PAID = 'PAID', 'Paid'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='bill')
@@ -86,12 +81,10 @@ class Bill(models.Model):
 
 
 class Payment(models.Model):
-    """Records a specific payment made against a bill"""
     class PaymentMode(models.TextChoices):
         CASH = 'CASH', 'Cash'
         CARD = 'CARD', 'Card'
         UPI = 'UPI', 'UPI'
-        BANK = 'BANK', 'Bank Transfer'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     bill = models.ForeignKey(Bill, on_delete=models.CASCADE, related_name='payments')
@@ -111,11 +104,10 @@ class Payment(models.Model):
 
 
 class BillAdjustment(models.Model):
-    """Records any discounts or surcharges applied to a bill"""
     class AdjustmentType(models.TextChoices):
-        DISCOUNT = 'DISCOUNT', 'Discount'
-        SURCHARGE = 'SURCHARGE', 'Surcharge'
-        TAX = 'TAX', 'Tax'
+        NEGOTIATION = 'NEGOTIATION', 'Negotiation'
+        COMPLAINT = 'COMPLAINT', 'Complaint'
+        GOODWILL = 'GOODWILL', 'Goodwill'
         OTHER = 'OTHER', 'Other'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

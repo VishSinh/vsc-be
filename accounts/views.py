@@ -1,5 +1,4 @@
-
-from rest_framework import APIView
+from rest_framework.views import APIView
 
 from accounts.models import Staff
 from accounts.serializers import LoginSerializer, RegisterSerializer
@@ -26,9 +25,9 @@ class RegisterView(APIView):
 
         hashed_password = Security.get_password_hash(password)
 
-        staff = Staff.objects.create(name=name, phone=phone, password=hashed_password, role=role)
+        Staff.objects.create(name=name, phone=phone, password=hashed_password, role=role)
 
-        return model_unwrap(staff), 201
+        return {'message': 'Registration successful'}
         
     
 
@@ -49,7 +48,7 @@ class LoginView(APIView):
         if not Security.verify_password(password, staff.password):
             raise Unauthorized('Invalid phone or password')
         
-        token = Security.create_token({'staff_id': staff.id, 'role': staff.role})
+        token = Security.create_token({'staff_id': str(staff.id), 'role': staff.role})
         
         return {
             'message': 'Login successful',

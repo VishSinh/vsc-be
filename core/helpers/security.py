@@ -26,7 +26,7 @@ class Security:
     @staticmethod
     def verify_token(token: str) -> tuple:
         try:
-            decoded_token = jwt.decode(token, settings.SESSION_SECRET_KEY, algorithms=['HS256'])
+            decoded_token = jwt.decode(token, settings.TOKEN_SECRET, algorithms=[settings.ALGORITHM])
             staff_id = decoded_token.get('staff_id')
             expiry = timezone.datetime.fromtimestamp(decoded_token.get('exp'), tz=timezone.utc)
             
@@ -34,11 +34,7 @@ class Security:
                 raise Unauthorized('Token expired')
             
             return staff_id, expiry
-        except jwt.ExpiredSignatureError:
-            raise Unauthorized('Token expired')
-        except jwt.InvalidTokenError:
-            raise Unauthorized('Invalid Token')
         except Exception as e:
-            raise InternalServerError('Error verifying token')
+            raise InternalServerError('Error verifying token: ' + str(e))
     
     

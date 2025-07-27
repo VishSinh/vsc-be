@@ -53,9 +53,9 @@ class Card(models.Model):
 class InventoryTransaction(models.Model):
     """Logs all stock movements"""
     class TransactionType(models.TextChoices):
-        STOCK_IN = 'STOCK_IN', 'Stock In'
-        STOCK_OUT = 'STOCK_OUT', 'Stock Out'
-        ADJUSTMENT = 'ADJUSTMENT', 'Adjustment'
+        PURCHASE = 'PURCHASE', 'Purchase'
+        SALE = 'SALE', 'Sale'
+        DAMAGE = 'DAMAGE', 'Damage'
         RETURN = 'RETURN', 'Return'
 
 

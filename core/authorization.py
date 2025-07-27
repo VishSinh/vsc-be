@@ -6,6 +6,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.permissions import BasePermission
 from accounts.models import Staff
+from core.helpers.api_response import APIResponse
 
 
 class Permission:
@@ -54,6 +55,20 @@ class Permission:
     # Audit Management
     AUDIT_READ = "audit.read"
     AUDIT_EXPORT = "audit.export"
+
+    # Vendor Management
+    VENDOR_CREATE = "vendor.create"
+    VENDOR_READ = "vendor.read"
+    VENDOR_UPDATE = "vendor.update"
+    VENDOR_DELETE = "vendor.delete"
+    VENDOR_LIST = "vendor.list"
+
+    # Card Management
+    CARD_CREATE = "card.create"
+    CARD_READ = "card.read"
+    CARD_UPDATE = "card.update"
+    CARD_DELETE = "card.delete"
+    CARD_LIST = "card.list"
     
     # System Management
     SYSTEM_CONFIG = "system.config"
@@ -92,32 +107,32 @@ class AuthorizationService:
     """Service for handling authorization logic"""
     
     @staticmethod
-    def get_user_permissions(user: Staff) -> List[str]:
+    def get_user_permissions(staff: Staff) -> List[str]:
         """Get permissions for a specific user"""
-        if user.role == Staff.Role.ADMIN:
+        if staff.role == Staff.Role.ADMIN:
             return RolePermissions.ADMIN_PERMISSIONS
-        elif user.role == Staff.Role.MANAGER:
+        elif staff.role == Staff.Role.MANAGER:
             return RolePermissions.MANAGER_PERMISSIONS
-        elif user.role == Staff.Role.STAFF:
+        elif staff.role == Staff.Role.STAFF:
             return RolePermissions.STAFF_PERMISSIONS
         return []
     
     @staticmethod
-    def has_permission(user: Staff, permission: str) -> bool:
+    def has_permission(staff: Staff, permission: str) -> bool:
         """Check if user has specific permission"""
-        user_permissions = AuthorizationService.get_user_permissions(user)
+        user_permissions = AuthorizationService.get_user_permissions(staff)
         return permission in user_permissions
     
     @staticmethod
-    def has_any_permission(user: Staff, permissions: List[str]) -> bool:
+    def has_any_permission(staff: Staff, permissions: List[str]) -> bool:
         """Check if user has any of the specified permissions"""
-        user_permissions = AuthorizationService.get_user_permissions(user)
+        user_permissions = AuthorizationService.get_user_permissions(staff)
         return any(permission in user_permissions for permission in permissions)
     
     @staticmethod
-    def has_all_permissions(user: Staff, permissions: List[str]) -> bool:
+    def has_all_permissions(staff: Staff, permissions: List[str]) -> bool:
         """Check if user has all of the specified permissions"""
-        user_permissions = AuthorizationService.get_user_permissions(user)
+        user_permissions = AuthorizationService.get_user_permissions(staff)
         return all(permission in user_permissions for permission in permissions)
 
 
@@ -130,23 +145,23 @@ class PermissionMixin:
     
     def check_permissions(self, request: HttpRequest) -> bool:
         """Check if user has required permissions"""
-        if not request.user.is_authenticated:
+        if not request.staff.is_authenticated:
             return False
         
         # Check single permission
         if self.permission_required:
             if isinstance(self.permission_required, str):
-                return AuthorizationService.has_permission(request.user, self.permission_required)
+                return AuthorizationService.has_permission(request.staff, self.permission_required)
             else:
-                return AuthorizationService.has_all_permissions(request.user, self.permission_required)
+                return AuthorizationService.has_all_permissions(request.staff, self.permission_required)
         
         # Check any permission
         if self.permission_any:
-            return AuthorizationService.has_any_permission(request.user, self.permission_any)
+            return AuthorizationService.has_any_permission(request.staff, self.permission_any)
         
         # Check all permissions
         if self.permission_all:
-            return AuthorizationService.has_all_permissions(request.user, self.permission_all)
+            return AuthorizationService.has_all_permissions(request.staff, self.permission_all)
         
         return True
 
@@ -158,16 +173,16 @@ class DRFPermission(BasePermission):
         self.permission_required = permission_required
     
     def has_permission(self, request, view):
-        if not request.user.is_authenticated:
+        if not request.staff.is_authenticated:
             return False
         
         if not self.permission_required:
             return True
         
         if isinstance(self.permission_required, str):
-            return AuthorizationService.has_permission(request.user, self.permission_required)
+            return AuthorizationService.has_permission(request.staff, self.permission_required)
         else:
-            return AuthorizationService.has_all_permissions(request.user, self.permission_required)
+            return AuthorizationService.has_all_permissions(request.staff, self.permission_required)
 
 
 def require_permission(permission: Union[str, List[str]]):
@@ -178,25 +193,19 @@ def require_permission(permission: Union[str, List[str]]):
             # Extract request from args (assuming it's the first argument after self)
             request = args[1] if len(args) > 1 else None
             
-            if not request or not hasattr(request, 'user'):
+            if not request or not hasattr(request, 'staff'):
                 raise PermissionDenied("No user context available")
             
-            if not request.user.is_authenticated:
-                return Response(
-                    {"error": "Authentication required"}, 
-                    status=status.HTTP_401_UNAUTHORIZED
-                )
+            if not request.is_authenticated:
+                return APIResponse(success=False, status_code=status.HTTP_401_UNAUTHORIZED, error="Authentication required").response()
             
             if isinstance(permission, str):
-                has_perm = AuthorizationService.has_permission(request.user, permission)
+                has_perm = AuthorizationService.has_permission(request.staff, permission)
             else:
-                has_perm = AuthorizationService.has_all_permissions(request.user, permission)
+                has_perm = AuthorizationService.has_all_permissions(request.staff, permission)
             
             if not has_perm:
-                return Response(
-                    {"error": "Insufficient permissions"}, 
-                    status=status.HTTP_403_FORBIDDEN
-                )
+                return APIResponse(success=False, status_code=status.HTTP_403_FORBIDDEN, error="Insufficient permissions").response()
             
             return func(*args, **kwargs)
         return wrapper
@@ -210,16 +219,16 @@ def require_any_permission(permissions: List[str]):
         def wrapper(*args, **kwargs):
             request = args[1] if len(args) > 1 else None
             
-            if not request or not hasattr(request, 'user'):
+            if not request or not hasattr(request, 'staff'):
                 raise PermissionDenied("No user context available")
             
-            if not request.user.is_authenticated:
+            if not request.is_authenticated:
                 return Response(
                     {"error": "Authentication required"}, 
                     status=status.HTTP_401_UNAUTHORIZED
                 )
             
-            if not AuthorizationService.has_any_permission(request.user, permissions):
+            if not AuthorizationService.has_any_permission(request.staff, permissions):
                 return Response(
                     {"error": "Insufficient permissions"}, 
                     status=status.HTTP_403_FORBIDDEN
@@ -237,16 +246,16 @@ def require_role(role: str):
         def wrapper(*args, **kwargs):
             request = args[1] if len(args) > 1 else None
             
-            if not request or not hasattr(request, 'user'):
+            if not request or not hasattr(request, 'staff'):
                 raise PermissionDenied("No user context available")
             
-            if not request.user.is_authenticated:
+            if not request.is_authenticated:
                 return Response(
                     {"error": "Authentication required"}, 
                     status=status.HTTP_401_UNAUTHORIZED
                 )
             
-            if request.user.role != role:
+            if request.staff.role != role:
                 return Response(
                     {"error": "Insufficient role permissions"}, 
                     status=status.HTTP_403_FORBIDDEN

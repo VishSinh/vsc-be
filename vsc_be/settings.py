@@ -38,6 +38,7 @@ MIDDLEWARE = [
     
     # Middlewares
     'vsc_be.middlewares.auth_middleware.AuthMiddleware',
+    'vsc_be.middlewares.exception_middleware.ExceptionMiddleware',
 ]
 
 ROOT_URLCONF = 'vsc_be.urls'
@@ -114,7 +115,7 @@ REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv('REFRESH_TOKEN_EXPIRE_MINUTES', 60 
 # Authentication Skip Patterns (endpoints that don't require authentication)
 SKIP_AUTH_PATTERNS = [
     # Authentication endpoints
-    '/api/auth/login/',
+    '/api/v1/auth/login/',
 ]
 
 

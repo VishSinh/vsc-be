@@ -9,9 +9,10 @@ class Staff(AbstractUser):
     phone = models.CharField(max_length=PHONE_LENGTH)
     class Role(models.TextChoices):
         ADMIN = 'ADMIN', 'Admin'
-        STAFF = 'STAFF', 'Staff'
         MANAGER = 'MANAGER', 'Manager'
+        SALES = 'SALES', 'Sales'
     
+    name = models.CharField(max_length=NAME_LENGTH)
     role = models.CharField(max_length=STATUS_LENGTH, choices=Role.choices, default=DEFAULT_ROLE)
     is_active = models.BooleanField(default=True)
     last_login = models.DateTimeField(null=True, blank=True)

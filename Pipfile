@@ -12,6 +12,9 @@ django-cors-headers = "*"
 django-extensions = "*"
 passlib = "*"
 python-jose = "*"
+bcrypt = "<4.0.0"
+requests = "*"
+imagehash = "*"
 
 [dev-packages]
 

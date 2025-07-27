@@ -67,7 +67,6 @@ class PrintingJob(models.Model):
         PENDING = 'PENDING', 'Pending'
         IN_PROGRESS = 'IN_PROGRESS', 'In Progress'
         COMPLETED = 'COMPLETED', 'Completed'
-        CANCELLED = 'CANCELLED', 'Cancelled'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order_item = models.ForeignKey(OrderItem, on_delete=models.CASCADE, related_name='printing_jobs')
@@ -95,12 +94,10 @@ class BoxOrder(models.Model):
         PENDING = 'PENDING', 'Pending'
         IN_PROGRESS = 'IN_PROGRESS', 'In Progress'
         COMPLETED = 'COMPLETED', 'Completed'
-        CANCELLED = 'CANCELLED', 'Cancelled'
 
     class BoxType(models.TextChoices):
-        STANDARD = 'STANDARD', 'Standard'
-        PREMIUM = 'PREMIUM', 'Premium'
-        CUSTOM = 'CUSTOM', 'Custom'
+        FOLDING = 'FOLDING', 'Folding'
+        COMPLETE = 'COMPLETE', 'Complete'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order_item = models.ForeignKey(OrderItem, on_delete=models.CASCADE, related_name='box_orders')
