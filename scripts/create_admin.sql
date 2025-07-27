@@ -32,10 +32,10 @@ BEGIN
             NOW(),
             NOW()
         );
-        
+
         RAISE NOTICE 'Admin user created successfully!';
         RAISE NOTICE 'Username: admin';
         RAISE NOTICE 'Password: %', admin_password;
         RAISE NOTICE 'ID: %', admin_id;
     END IF;
-END $$; 
+END $$;

@@ -17,6 +17,15 @@ requests = "*"
 imagehash = "*"
 
 [dev-packages]
+black = "*"
+isort = "*"
+flake8 = "*"
+flake8-bugbear = "*"
+flake8-django = "*"
+mypy = "*"
+django-stubs = "*"
+djangorestframework-stubs = "*"
+pre-commit = "*"
 
 [requires]
 python_version = "3.11"

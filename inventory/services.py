@@ -1,11 +1,19 @@
 from django.db import transaction
 
-from core.helpers.image_utils import ImageUtils
 from core.exceptions import ResourceNotFound
-from inventory.models import InventoryTransaction, Card, Vendor
+from core.helpers.image_utils import ImageUtils
+from inventory.models import Card, InventoryTransaction, Vendor
 
 
 class CardService:
+    @staticmethod
+    def get_card_by_id(card_id):
+        card = Card.objects.filter(id=card_id).first()
+        if not card:
+            raise ResourceNotFound("Card not found")
+
+        return card
+
     @staticmethod
     @transaction.atomic  # Ensures both the Card and its first transaction are created successfully
     def create_card(vendor_id, staff, image, cost_price, base_price, max_discount, quantity):
@@ -21,23 +29,23 @@ class CardService:
         # 2. Create the card instance
         card = Card.objects.create(
             vendor=vendor,
-            image=image, 
-            cost_price=cost_price, 
-            base_price=base_price, 
-            max_discount=max_discount, 
-            quantity=quantity, 
-            barcode=barcode, 
-            perceptual_hash=perceptual_hash
+            image=image,
+            cost_price=cost_price,
+            base_price=base_price,
+            max_discount=max_discount,
+            quantity=quantity,
+            barcode=barcode,
+            perceptual_hash=perceptual_hash,
         )
 
         # 3. Create the initial inventory transaction to log the purchase
         InventoryTransaction.objects.create(
-            card=card, 
-            staff=staff, 
-            transaction_type=InventoryTransaction.TransactionType.PURCHASE, 
-            quantity_changed=quantity, 
-            cost_price=cost_price, 
-            notes='Initial stock'
+            card=card,
+            staff=staff,
+            transaction_type=InventoryTransaction.TransactionType.PURCHASE,
+            quantity_changed=quantity,
+            cost_price=cost_price,
+            notes="Initial stock",
         )
 
         return card
@@ -58,7 +66,7 @@ class CardService:
         # Use select_for_update to lock the row and prevent race conditions
         card = Card.objects.select_for_update().filter(id=card_id).first()
         if not card:
-            raise ResourceNotFound('Card not found')
+            raise ResourceNotFound("Card not found")
 
         # 1. Update the card's quantity
         card.quantity += quantity_change
@@ -66,14 +74,14 @@ class CardService:
 
         # 2. Create the transaction log
         InventoryTransaction.objects.create(
-            card=card, 
-            staff=staff, 
+            card=card,
+            staff=staff,
             transaction_type=InventoryTransaction.TransactionType.PURCHASE,
-            quantity_changed=quantity_change, 
+            quantity_changed=quantity_change,
             cost_price=card.cost_price,
-            notes='Additional stock purchase'
+            notes="Additional stock purchase",
         )
-        
+
         return card
 
 
@@ -81,4 +89,4 @@ class VendorService:
     @staticmethod
     def create_vendor(name, phone):
         vendor = Vendor.objects.create(name=name, phone=phone)
-        return vendor 
+        return vendor

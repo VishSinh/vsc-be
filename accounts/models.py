@@ -1,17 +1,20 @@
 import uuid
-from django.db import models
+
 from django.contrib.auth.models import AbstractUser
-from core.constants import PHONE_LENGTH, NAME_LENGTH, STATUS_LENGTH, DEFAULT_ROLE
+from django.db import models
+
+from core.constants import DEFAULT_ROLE, NAME_LENGTH, PHONE_LENGTH, STATUS_LENGTH
 
 
 class Staff(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     phone = models.CharField(max_length=PHONE_LENGTH)
+
     class Role(models.TextChoices):
-        ADMIN = 'ADMIN', 'Admin'
-        MANAGER = 'MANAGER', 'Manager'
-        SALES = 'SALES', 'Sales'
-    
+        ADMIN = "ADMIN", "Admin"
+        MANAGER = "MANAGER", "Manager"
+        SALES = "SALES", "Sales"
+
     name = models.CharField(max_length=NAME_LENGTH)
     role = models.CharField(max_length=STATUS_LENGTH, choices=Role.choices, default=DEFAULT_ROLE)
     is_active = models.BooleanField(default=True)
@@ -20,13 +23,12 @@ class Staff(AbstractUser):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'staff'
-        verbose_name = 'Staff'
-        verbose_name_plural = 'Staff'
+        db_table = "staff"
+        verbose_name = "Staff"
+        verbose_name_plural = "Staff"
 
     def __str__(self):
         return f"{self.name} ({self.role})"
-
 
 
 class Customer(models.Model):
@@ -38,9 +40,9 @@ class Customer(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'customers'
-        verbose_name = 'Customer'
-        verbose_name_plural = 'Customers'
+        db_table = "customers"
+        verbose_name = "Customer"
+        verbose_name_plural = "Customers"
 
     def __str__(self):
         return self.name

@@ -46,6 +46,11 @@ coverage.xml
 .venv/
 venv/
 
+# Code quality tools
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
 # Developers
 *.sw*
 .DS_Store
@@ -53,4 +58,17 @@ venv/
 # example database
 drf_example
 
+# Environment and configuration files
 .env
+.env.local
+.env.*.local
+
+# Schema and documentation files
+*.er
+*.sql
+
+# IDE and editor files
+.vscode/
+*.swp
+*.swo
+*~

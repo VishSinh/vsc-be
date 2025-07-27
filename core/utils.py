@@ -1,6 +1,7 @@
-from django.utils import timezone
-from django.db.models.fields.related import ForeignKey, OneToOneField
 from collections.abc import Iterable
+
+from django.db.models.fields.related import ForeignKey, OneToOneField
+
 
 def model_unwrap(instance, fields=None, exclude=None, include_timestamps=False):
     """
@@ -15,13 +16,21 @@ def model_unwrap(instance, fields=None, exclude=None, include_timestamps=False):
     :return: dict or list of dicts representation of the model instance(s).
     """
     # Handle QuerySet, list, or any iterable of model instances (but not string/bytes)
-    if isinstance(instance, Iterable) and not isinstance(instance, (str, bytes, dict)) and hasattr(instance, '__iter__'):
-        return [model_unwrap(obj, fields=fields, exclude=exclude, include_timestamps=include_timestamps) for obj in instance]
+    if isinstance(instance, Iterable) and not isinstance(instance, (str, bytes, dict)) and hasattr(instance, "__iter__"):
+        return [
+            model_unwrap(
+                obj,
+                fields=fields,
+                exclude=exclude,
+                include_timestamps=include_timestamps,
+            )
+            for obj in instance
+        ]
 
     data = {}
     default_exclude = set()
     if not include_timestamps:
-        default_exclude.update({'created_at', 'updated_at'})
+        default_exclude.update({"created_at", "updated_at"})
     if exclude is not None:
         exclude_set = set(exclude) | default_exclude
     else:

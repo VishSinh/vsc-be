@@ -1,9 +1,9 @@
 from django.db import transaction
 from django.utils import timezone
 
+from accounts.models import Staff
+from core.exceptions import ResourceNotFound, Unauthorized
 from core.helpers.security import Security
-from core.exceptions import Unauthorized, ResourceNotFound
-from accounts.models import Staff, Customer
 
 
 class StaffService:
@@ -15,47 +15,36 @@ class StaffService:
         """
         # Check if phone already exists
         if Staff.objects.filter(phone=phone).exists():
-            raise Unauthorized('Phone number already registered')
-        
+            raise Unauthorized("Phone number already registered")
+
         # Hash the password
         hashed_password = Security.get_password_hash(password)
-        
+
         # Create staff member
-        staff = Staff.objects.create(
-            name=name,
-            phone=phone,
-            password=hashed_password,
-            role=role
-        )
-        
+        staff = Staff.objects.create(name=name, phone=phone, password=hashed_password, role=role)
+
         return staff
-    
+
     @staticmethod
-    def authenticate_staff_and_get_token(phone, password):
+    def authenticate_staff_and_get_token(staff, password):
         """
         Authenticates a staff member and returns login data.
         """
-        # Find staff by phone
-        staff = StaffService.get_staff_by_phone(phone)
-        
         # Verify password
         if not Security.verify_password(password, staff.password):
-            raise Unauthorized('Invalid phone or password')
-        
+            raise Unauthorized("Invalid phone or password")
+
         # Check if staff is active
         if not staff.is_active:
-            raise Unauthorized('Account is deactivated')
-        
+            raise Unauthorized("Account is deactivated")
+
         # Update last login
         staff.last_login = timezone.now()
-        staff.save(update_fields=['last_login'])
-        
+        staff.save(update_fields=["last_login"])
+
         # Generate token
-        token = Security.create_token({
-            'staff_id': str(staff.id), 
-            'role': staff.role
-        })
-        
+        token = Security.create_token({"staff_id": str(staff.id), "role": staff.role})
+
         return token
 
     @staticmethod
@@ -65,10 +54,10 @@ class StaffService:
         """
         staff = Staff.objects.filter(phone=phone, is_active=True).first()
         if not staff:
-            raise ResourceNotFound('Staff member not found')
-        
+            raise ResourceNotFound("Staff member not found")
+
         return staff
-    
+
     @staticmethod
     def get_staff_by_id(staff_id):
         """
@@ -76,7 +65,5 @@ class StaffService:
         """
         staff = Staff.objects.filter(id=staff_id, is_active=True).first()
         if not staff:
-            raise ResourceNotFound('Staff member not found')
+            raise ResourceNotFound("Staff member not found")
         return staff
-    
-   
