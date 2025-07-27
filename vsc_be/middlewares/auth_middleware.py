@@ -1,8 +1,8 @@
 from django.conf import settings
 from rest_framework import status
 
-from accounts.models import Staff
-from core.exceptions import InternalServerError, Unauthorized
+from accounts.services import StaffService
+from core.exceptions import Unauthorized
 from core.helpers.api_response import APIResponse
 from core.helpers.security import Security
 from uuid import UUID
@@ -28,9 +28,7 @@ class AuthMiddleware:
             token = auth_header.split(' ')[1]
             
             staff_id, expiry = Security.verify_token(token)
-            print(staff_id)
-            staff = Staff.objects.filter(id=staff_id).first()
-            print(staff)
+            staff = StaffService.get_staff_by_id(staff_id)
             
             if not staff:
                 raise Unauthorized('Invalid Staff')
@@ -38,8 +36,6 @@ class AuthMiddleware:
             request.staff = staff
             request.is_authenticated = True
 
-            print(request.staff)
-            
             return self.get_response(request)
         except Unauthorized as e:
             print(e)

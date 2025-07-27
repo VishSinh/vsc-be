@@ -15,3 +15,7 @@ class CardSerializer(BaseSerializer):
     max_discount = serializers.DecimalField(required=True, max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES, min_value=0)
     quantity = serializers.IntegerField(required=True, min_value=0)
     vendor_id = serializers.UUIDField(required=True)
+
+
+class CardPurchaseSerializer(BaseSerializer):
+    quantity = serializers.IntegerField(required=True, min_value=0)
