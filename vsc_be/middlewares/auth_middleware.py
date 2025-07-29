@@ -44,6 +44,6 @@ class AuthMiddleware:
             print(f"Auth middleware error: {str(e)}")
             return APIResponse(
                 success=False,
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=status.HTTP_401_UNAUTHORIZED,
                 error=e,
             ).response()

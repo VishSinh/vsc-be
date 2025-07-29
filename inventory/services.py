@@ -2,6 +2,7 @@ from django.db import transaction
 
 from core.exceptions import Conflict, ResourceNotFound
 from core.helpers.image_utils import ImageUtils
+from core.helpers.pagination import PaginationHelper
 from inventory.models import Card, InventoryTransaction, Vendor
 
 
@@ -14,8 +15,12 @@ class CardService:
         return card
 
     @staticmethod
+    def get_cards():
+        return Card.objects.all()
+
+    @staticmethod
     @transaction.atomic  # Ensures both the Card and its first transaction are created successfully
-    def create_card(vendor_id, staff, image, cost_price, base_price, max_discount, quantity):
+    def create_card(vendor_id, staff, image, cost_price, sell_price, max_discount, quantity):
         """
         Handles the business logic for creating a new card and its initial inventory transaction.
         """
@@ -30,7 +35,7 @@ class CardService:
             vendor=vendor,
             image=image,
             cost_price=cost_price,
-            base_price=base_price,
+            sell_price=sell_price,
             max_discount=max_discount,
             quantity=quantity,
             barcode=barcode,
@@ -99,6 +104,12 @@ class VendorService:
             raise ResourceNotFound("Vendor not found")
 
         return vendor
+
+    @staticmethod
+    def get_vendors(page, page_size):
+        """Get paginated vendors with metadata"""
+        queryset = Vendor.objects.all().order_by("name")
+        return PaginationHelper.paginate_queryset(queryset=queryset, page=page, page_size=page_size)
 
     @staticmethod
     def create_vendor(name, phone):

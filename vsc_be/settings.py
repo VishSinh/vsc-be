@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "auditing",
     # Third Party Apps
     "django_extensions",
+    "corsheaders",
 ]
 
 AUTH_USER_MODEL = "accounts.Staff"
@@ -32,6 +33,7 @@ AUTH_USER_MODEL = "accounts.Staff"
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -117,5 +119,31 @@ SKIP_AUTH_PATTERNS = [
     "/api/v1/auth/login/",
 ]
 
+# CORS Settings
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https?://localhost:\d+$",
+    r"^https?://127\.0\.0\.1:\d+$",
+]
+
+# REST Framework Settings
+# REST_FRAMEWORK = {
+#     "DEFAULT_AUTHENTICATION_CLASSES": [],
+#     "DEFAULT_PERMISSION_CLASSES": [],
+#     "DEFAULT_RENDERER_CLASSES": [
+#         "rest_framework.renderers.JSONRenderer",
+#     ],
+#     "DEFAULT_PARSER_CLASSES": [
+#         "rest_framework.parsers.JSONParser",
+#     ],
+#     "EXCEPTION_HANDLER": "core.helpers.api_response.api_exception_handler",
+# }
 
 TAX_PERCENTAGE = 0

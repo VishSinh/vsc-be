@@ -1,13 +1,10 @@
 import json
-import logging
 from typing import Any
 
 from django.http import HttpRequest, HttpResponse
 from rest_framework import status
 
 from core.helpers.api_response import APIResponse
-
-logger = logging.getLogger(__name__)
 
 
 class ExceptionMiddleware:
@@ -27,11 +24,11 @@ class ExceptionMiddleware:
         return response
 
     def process_exception(self, request: HttpRequest, exception: Exception) -> HttpResponse:
-        logger.error(str(exception))
+        print(str(exception))
 
         # Add status_code attribute to exception if it doesn't exist
         if not hasattr(exception, "status_code"):
-            logger.info("Exception does not have status code")
+            print("Exception does not have status code")
             setattr(exception, "status_code", status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return APIResponse(success=False, status_code=getattr(exception, "status_code", 500), error=exception).response()

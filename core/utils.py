@@ -49,5 +49,4 @@ def model_unwrap(instance, fields=None, exclude=None, include_timestamps=False):
             data[f"{field_name}_id"] = related_obj.pk if related_obj is not None else None
         else:
             data[field_name] = getattr(instance, field_name)
-    print("data", type(data))
     return data

@@ -6,7 +6,7 @@ from django.utils import timezone
 from jose import jwt
 from passlib.context import CryptContext
 
-from core.exceptions import InternalServerError, Unauthorized
+from core.exceptions import Unauthorized
 
 
 class Security:
@@ -37,4 +37,4 @@ class Security:
 
             return staff_id, expiry
         except Exception as e:
-            raise InternalServerError("Error verifying token: " + str(e))
+            raise Unauthorized("Error verifying token: " + str(e))

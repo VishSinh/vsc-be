@@ -56,7 +56,7 @@ class ImageUtils:
         for _ in range(max_attempts):
             timestamp = int(time.time() * 1000)
             random_suffix = str(uuid.uuid4())[:8]
-            barcode = f"{prefix}_{timestamp}_{random_suffix}"
+            barcode = f"{timestamp}_{random_suffix}"
 
             # Check uniqueness if model_class is provided
             if model_class and hasattr(model_class, "objects"):

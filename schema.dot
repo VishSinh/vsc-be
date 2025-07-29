@@ -1,6 +1,6 @@
 digraph model_graph {
   // Dotfile by Django-Extensions graph_models
-  // Created: 2025-07-27 21:11
+  // Created: 2025-07-28 05:07
   // Cli Options: -a --dot
 
   fontname = "Roboto"
@@ -651,14 +651,6 @@ digraph model_graph {
 
 
     <TR><TD ALIGN="LEFT" BORDER="0">
-    <FONT FACE="Roboto">base_price</FONT>
-    </TD><TD ALIGN="LEFT">
-    <FONT FACE="Roboto">DecimalField</FONT>
-    </TD></TR>
-
-
-
-    <TR><TD ALIGN="LEFT" BORDER="0">
     <FONT FACE="Roboto">cost_price</FONT>
     </TD><TD ALIGN="LEFT">
     <FONT FACE="Roboto">DecimalField</FONT>
@@ -715,6 +707,14 @@ digraph model_graph {
 
 
     <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">sell_price</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">DecimalField</FONT>
+    </TD></TR>
+
+
+
+    <TR><TD ALIGN="LEFT" BORDER="0">
     <FONT COLOR="#7B7B7B" FACE="Roboto">updated_at</FONT>
     </TD><TD ALIGN="LEFT">
     <FONT COLOR="#7B7B7B" FACE="Roboto">DateTimeField</FONT>
@@ -744,6 +744,14 @@ digraph model_graph {
     <FONT FACE="Roboto"><B>card</B></FONT>
     </TD><TD ALIGN="LEFT">
     <FONT FACE="Roboto"><B>ForeignKey (id)</B></FONT>
+    </TD></TR>
+
+
+
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT COLOR="#7B7B7B" FACE="Roboto"><B>order_item</B></FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT COLOR="#7B7B7B" FACE="Roboto"><B>ForeignKey (id)</B></FONT>
     </TD></TR>
 
 
@@ -959,14 +967,6 @@ digraph model_graph {
     <FONT FACE="Roboto">requires_printing</FONT>
     </TD><TD ALIGN="LEFT">
     <FONT FACE="Roboto">BooleanField</FONT>
-    </TD></TR>
-
-
-
-    <TR><TD ALIGN="LEFT" BORDER="0">
-    <FONT FACE="Roboto">subtotal</FONT>
-    </TD><TD ALIGN="LEFT">
-    <FONT FACE="Roboto">DecimalField</FONT>
     </TD></TR>
 
 
@@ -1665,6 +1665,9 @@ digraph model_graph {
 
   inventory_models_InventoryTransaction -> accounts_models_Staff
   [label=" staff (inventory_transactions)"] [arrowhead=none, arrowtail=dot, dir=both];
+
+  inventory_models_InventoryTransaction -> orders_models_OrderItem
+  [label=" order_item (inventory_transactions)"] [arrowhead=none, arrowtail=dot, dir=both];
 
 
   orders_models_Order -> accounts_models_Customer

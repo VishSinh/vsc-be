@@ -2,12 +2,32 @@ from rest_framework.views import APIView
 
 from core.authorization import Permission, require_permission
 from core.decorators import forge
+from core.helpers.pagination import PaginationHelper
 from core.utils import model_unwrap
-from inventory.serializers import CardPurchaseSerializer, CardQueryParams, CardSerializer, CardSimilarityParams, VendorSerializer
+from inventory.serializers import CardPurchaseSerializer, CardQueryParams, CardSerializer, CardSimilarityParams, VendorQueryParams, VendorSerializer
 from inventory.services import CardService, VendorService
 
 
 class VendorView(APIView):
+    @forge
+    @require_permission(Permission.VENDOR_READ)
+    def get(self, request, vendor_id=None):
+        if vendor_id:
+            vendor = VendorService.get_vendor_by_id(vendor_id)
+            return model_unwrap(vendor)
+
+        params = VendorQueryParams.validate_params(request)
+
+        # Get all vendors with pagination
+        page = params.get_value("page")
+        page_size = params.get_value("page_size")
+        paginated_response = VendorService.get_vendors(page=page, page_size=page_size)
+
+        # Convert the data using model_unwrap
+        paginated_response["items"] = [model_unwrap(vendor) for vendor in paginated_response["items"]]
+
+        return paginated_response
+
     @forge
     @require_permission(Permission.VENDOR_CREATE)
     def post(self, request):
@@ -27,8 +47,11 @@ class CardView(APIView):
             return model_unwrap(card)
 
         params = CardQueryParams.validate_params(request)
-        card = CardService.get_card_by_id(params.get_value("card_id"))
-        return model_unwrap(card)
+
+        cards = CardService.get_cards()
+        cards, page_info = PaginationHelper.paginate_queryset(cards, params.get_value("page"), params.get_value("page_size"))
+
+        return [model_unwrap(card) for card in cards], page_info
 
     @forge
     @require_permission(Permission.CARD_CREATE)
@@ -40,7 +63,7 @@ class CardView(APIView):
             staff=request.staff,
             image=body.get_value("image"),
             cost_price=body.get_value("cost_price"),
-            base_price=body.get_value("base_price"),
+            sell_price=body.get_value("sell_price"),
             max_discount=body.get_value("max_discount"),
             quantity=body.get_value("quantity"),
         )
