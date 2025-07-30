@@ -69,6 +69,7 @@ class Permission:
     # Card Management
     CARD_CREATE = "card.create"
     CARD_READ = "card.read"
+    CARD_PURCHASE = "card.purchase"
     CARD_UPDATE = "card.update"
     CARD_DELETE = "card.delete"
     CARD_LIST = "card.list"

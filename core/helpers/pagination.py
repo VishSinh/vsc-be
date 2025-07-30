@@ -17,12 +17,20 @@ class PaginationHelper:
             queryset: Django QuerySet to paginate
             page: Page number (1-indexed)
             page_size: Number of items per page
-            data_serializer: Optional function to serialize each item
 
         Returns:
             Tuple of (data_dict, pagination_dict) for use with @forge decorator
         """
-        page_obj = Paginator(queryset, page_size).get_page(page)
+        paginator = Paginator(queryset, page_size)
+        total_pages = paginator.num_pages
+
+        # Check if the requested page is valid
+        if page > total_pages and total_pages > 0:
+            from core.exceptions import BadRequest
+
+            raise BadRequest(f"Page {page} does not exist. Total pages: {total_pages}")
+
+        page_obj = paginator.get_page(page)
 
         pagination_info = {
             "current_page": page,

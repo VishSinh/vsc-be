@@ -22,7 +22,7 @@ class Security:
 
     @staticmethod
     def create_token(data: dict) -> str:
-        data["exp"] = timezone.now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        data["exp"] = timezone.now() + timedelta(minutes=settings.TOKEN_EXPIRE_MINUTES)
         return str(jwt.encode(data, settings.TOKEN_SECRET, algorithm=settings.ALGORITHM))
 
     @staticmethod

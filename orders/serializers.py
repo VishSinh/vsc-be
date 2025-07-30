@@ -11,11 +11,11 @@ class OrderCreateSerializer(BaseSerializer):
         quantity = serializers.IntegerField(required=True, min_value=0)
         # Box Order
         requires_box = serializers.BooleanField(required=True)
-        box_type = serializers.ChoiceField(choices=BoxOrder.BoxType.choices, required=False)
-        total_box_cost = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+        box_type = serializers.ChoiceField(choices=BoxOrder.BoxType.choices, required=False, allow_null=True)
+        total_box_cost = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True, default=0)
         # Printing Job
         requires_printing = serializers.BooleanField(required=True)
-        total_printing_cost = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+        total_printing_cost = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True, default=0)
 
     customer_id = serializers.UUIDField(required=True)
     order_items = serializers.ListField(child=OrderItems(), required=True)
@@ -26,13 +26,13 @@ class OrderCreateSerializer(BaseSerializer):
         """Validate that all required fields are provided when production services are requested"""
         for item in value:
             if item.get("requires_box"):
-                if not item.get("box_type"):
+                if item.get("box_type") is None:
                     raise serializers.ValidationError("box_type is required when requires_box is True")
-                if not item.get("total_box_cost"):
+                if item.get("total_box_cost") is None:
                     raise serializers.ValidationError("total_box_cost is required when requires_box is True")
 
             if item.get("requires_printing"):
-                if not item.get("total_printing_cost"):
+                if item.get("total_printing_cost") is None:
                     raise serializers.ValidationError("total_printing_cost is required when requires_printing is True")
 
         return value

@@ -19,14 +19,10 @@ class VendorView(APIView):
         params = VendorQueryParams.validate_params(request)
 
         # Get all vendors with pagination
-        page = params.get_value("page")
-        page_size = params.get_value("page_size")
-        paginated_response = VendorService.get_vendors(page=page, page_size=page_size)
+        vendors = VendorService.get_vendors()
+        vendors, page_info = PaginationHelper.paginate_queryset(vendors, params.get_value("page"), params.get_value("page_size"))
 
-        # Convert the data using model_unwrap
-        paginated_response["items"] = [model_unwrap(vendor) for vendor in paginated_response["items"]]
-
-        return paginated_response
+        return [model_unwrap(vendor) for vendor in vendors], page_info
 
     @forge
     @require_permission(Permission.VENDOR_CREATE)
@@ -47,6 +43,10 @@ class CardView(APIView):
             return model_unwrap(card)
 
         params = CardQueryParams.validate_params(request)
+
+        if params.get_value("barcode"):
+            card = CardService.get_card_by_barcode(params.get_value("barcode"))
+            return model_unwrap(card)
 
         cards = CardService.get_cards()
         cards, page_info = PaginationHelper.paginate_queryset(cards, params.get_value("page"), params.get_value("page_size"))
@@ -82,7 +82,7 @@ class CardSimilarityView(APIView):
 
 class CardPurchaseView(APIView):
     @forge
-    @require_permission(Permission.CARD_UPDATE)
+    @require_permission(Permission.CARD_PURCHASE)
     def patch(self, request, card_id):
         body = CardPurchaseSerializer.validate_request(request)
 

@@ -33,13 +33,13 @@ class APIResponse:
             "success": self.success,
         }
 
-        if self.data is not None:
+        if self.data:
             response_data["data"] = self.data
 
-        if self.error is not None:
+        if self.error:
             response_data["error"] = self._format_error()
 
-        if self.pagination is not None:
+        if self.pagination:
             response_data["pagination"] = self.pagination
 
         return JsonResponse(response_data, status=self.status_code)

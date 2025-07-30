@@ -13,6 +13,7 @@ class VendorQueryParams(ParamSerializer):
 
 
 class CardQueryParams(ParamSerializer):
+    barcode = serializers.CharField(required=False)
     page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
     page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
 

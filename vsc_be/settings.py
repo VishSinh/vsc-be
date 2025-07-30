@@ -7,7 +7,13 @@ SECRET_KEY = "django-insecure-xmz33x=#rph_-+0f&p&y)b7xz55%xoi-5@@b8u=d%-#ndh!lbn
 
 DEBUG = True
 
-ALLOWED_HOSTS: List[str] = []
+ALLOWED_HOSTS: List[str] = [
+    "localhost",
+    "127.0.0.1",
+    "10.0.2.2",  # Android emulator
+    "0.0.0.0",
+    "*",  # Allow all hosts in development
+]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -42,6 +48,7 @@ MIDDLEWARE = [
     # Middlewares
     "vsc_be.middlewares.auth_middleware.AuthMiddleware",
     "vsc_be.middlewares.exception_middleware.ExceptionMiddleware",
+    "vsc_be.middlewares.logging_middleware.LoggingMiddleware",
 ]
 
 ROOT_URLCONF = "vsc_be.urls"
@@ -110,7 +117,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 TOKEN_SECRET = os.getenv("TOKEN_SECRET", SECRET_KEY)
 SESSION_SECRET_KEY = os.getenv("SESSION_SECRET_KEY", SECRET_KEY)
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+TOKEN_EXPIRE_MINUTES = int(os.getenv("TOKEN_EXPIRE_MINUTES", 3000))
 REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES", 60 * 24 * 30))
 
 # Authentication Skip Patterns (endpoints that don't require authentication)

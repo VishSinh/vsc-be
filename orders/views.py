@@ -47,6 +47,8 @@ class OrderView(APIView):
     def post(self, request):
         body = OrderCreateSerializer.validate_request(request)
 
+        print("body", body)
+
         staff = request.staff
         customer = CustomerService.get_customer_by_id(body.get_value("customer_id"))
         order_date = body.get_value("order_date", timezone.now())

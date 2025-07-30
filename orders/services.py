@@ -70,11 +70,18 @@ class OrderService:
 class BillService:
     @staticmethod
     def create_bill(order):
-        if not (bill := Bill.objects.filter(order=order).first()):
+        if BillService.check_bill_exists(order):
             raise Conflict("Bill already exists")
 
         bill = Bill.objects.create(
             order=order,
             tax_percentage=settings.TAX_PERCENTAGE,
         )
+        return bill
+
+    @staticmethod
+    def check_bill_exists(order):
+        if bill := Bill.objects.filter(order=order).first():
+            raise Conflict("Bill already exists")
+
         return bill
