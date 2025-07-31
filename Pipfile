@@ -17,6 +17,9 @@ django-extensions = "*"
 graphviz = "*"
 pydotplus = "*"
 django-cors-headers = "*"
+boto3 = "*"
+shortuuid = "*"
+dj-database-url = "*"
 
 [dev-packages]
 black = "*"

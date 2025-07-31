@@ -2,18 +2,44 @@ import os
 from pathlib import Path
 from typing import List
 
+import dj_database_url
+
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = "django-insecure-xmz33x=#rph_-+0f&p&y)b7xz55%xoi-5@@b8u=d%-#ndh!lbn"
 
-DEBUG = True
 
-ALLOWED_HOSTS: List[str] = [
-    "localhost",
-    "127.0.0.1",
-    "10.0.2.2",  # Android emulator
-    "0.0.0.0",
-    "*",  # Allow all hosts in development
-]
+# =================================================
+# Environment Variables
+# =================================================
+# General Settings
+SECRET_KEY = os.getenv("SECRET_KEY")
+DEBUG = os.getenv("DEBUG") == "True"
+SESSION_SECRET_KEY = os.getenv("SESSION_SECRET_KEY")
+ALLOWED_HOSTS: List[str] = os.getenv("ALLOWED_HOSTS", "").split(",")
+
+# Authentication Settings
+TOKEN_SECRET = os.getenv("TOKEN_SECRET")
+ALGORITHM = os.getenv("ALGORITHM")
+TOKEN_EXPIRE_MINUTES = int(os.getenv("TOKEN_EXPIRE_MINUTES", 6000))
+
+# Database Settings
+DATABASE_NAME = os.getenv("DATABASE_NAME")
+DATABASE_USER = os.getenv("DATABASE_USER")
+DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
+DATABASE_HOST = os.getenv("DATABASE_HOST")
+DATABASE_PORT = os.getenv("DATABASE_PORT")
+
+# S3 Settings
+BUCKET_NAME = os.getenv("BUCKET_NAME")
+S3_CLIENT_ENDPOINT = os.getenv("S3_CLIENT_ENDPOINT")
+S3_CLIENT_REGION = os.getenv("S3_CLIENT_REGION")
+S3_CLIENT_ACCESS_KEY_ID = os.getenv("S3_CLIENT_ACCESS_KEY_ID")
+S3_CLIENT_SECRET_ACCESS_KEY = os.getenv("S3_CLIENT_SECRET_ACCESS_KEY")
+S3_DOWNLOAD_URL = os.getenv("S3_DOWNLOAD_URL")
+S3_IMAGE_FOLDER = os.getenv("S3_IMAGE_FOLDER")
+
+# Business Settings
+TAX_PERCENTAGE = float(os.getenv("TAX_PERCENTAGE", 0.0))
+# =================================================
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -72,14 +98,11 @@ WSGI_APPLICATION = "vsc_be.wsgi.application"
 
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "vsc",
-        "USER": "vish",
-        "PASSWORD": "vish123",
-        "HOST": "localhost",
-        "PORT": "5432",
-    }
+    "default": dj_database_url.config(
+        default=os.getenv("DATABASE_URL"),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 
@@ -113,44 +136,13 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-# Authentication Settings
-TOKEN_SECRET = os.getenv("TOKEN_SECRET", SECRET_KEY)
-SESSION_SECRET_KEY = os.getenv("SESSION_SECRET_KEY", SECRET_KEY)
-ALGORITHM = os.getenv("ALGORITHM", "HS256")
-TOKEN_EXPIRE_MINUTES = int(os.getenv("TOKEN_EXPIRE_MINUTES", 3000))
-REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES", 60 * 24 * 30))
-
 # Authentication Skip Patterns (endpoints that don't require authentication)
 SKIP_AUTH_PATTERNS = [
     # Authentication endpoints
     "/api/v1/auth/login/",
 ]
 
-# CORS Settings
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-]
-CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"^https?://localhost:\d+$",
-    r"^https?://127\.0\.0\.1:\d+$",
-]
 
-# REST Framework Settings
-# REST_FRAMEWORK = {
-#     "DEFAULT_AUTHENTICATION_CLASSES": [],
-#     "DEFAULT_PERMISSION_CLASSES": [],
-#     "DEFAULT_RENDERER_CLASSES": [
-#         "rest_framework.renderers.JSONRenderer",
-#     ],
-#     "DEFAULT_PARSER_CLASSES": [
-#         "rest_framework.parsers.JSONParser",
-#     ],
-#     "EXCEPTION_HANDLER": "core.helpers.api_response.api_exception_handler",
-# }
-
-TAX_PERCENTAGE = 0
+CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS") == "True"
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+CORS_ALLOWED_ORIGIN_REGEXES = os.getenv("CORS_ALLOWED_ORIGIN_REGEXES", "").split(",")

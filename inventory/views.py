@@ -58,6 +58,11 @@ class CardView(APIView):
     def post(self, request):
         body = CardSerializer.validate_request(request)
 
+        # # TODO: Get Image from request
+        # # TODO: Validate Image
+        # # TODO: Upload Image to Supabase and Get URL (core.helpers.image_upload.py)
+        # image = request.FILES.get("image")
+
         CardService.create_card(
             vendor_id=body.get_value("vendor_id"),
             staff=request.staff,

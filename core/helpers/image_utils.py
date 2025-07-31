@@ -35,7 +35,7 @@ class ImageUtils:
             raise InternalServerError(f"Failed to generate perceptual hash: {str(e)}")
 
     @staticmethod
-    def generate_unique_barcode(prefix: str = "CARD", model_class=None) -> str:
+    def generate_unique_barcode(model_class=None) -> str:
         """
         Generate a unique barcode with timestamp and random suffix.
 

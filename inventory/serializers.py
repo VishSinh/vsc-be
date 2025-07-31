@@ -5,7 +5,9 @@ from core.helpers.base_serializer import BaseSerializer
 from core.helpers.param_serializer import ParamSerializer
 
 
+# ================================================
 # Parameter Serializers
+# ================================================
 class VendorQueryParams(ParamSerializer):
     vendor_id = serializers.UUIDField(required=False)
     page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
@@ -22,13 +24,16 @@ class CardSimilarityParams(ParamSerializer):
     image = serializers.URLField(required=True)
 
 
+# ================================================
+# Request Serializers
+# ================================================
 class VendorSerializer(BaseSerializer):
     name = serializers.CharField(required=True, max_length=NAME_LENGTH)
     phone = serializers.CharField(required=True, max_length=PHONE_LENGTH)
 
 
 class CardSerializer(BaseSerializer):
-    image = serializers.URLField(required=True)
+    image = serializers.ImageField(required=True)
     cost_price = serializers.DecimalField(
         required=True,
         max_digits=PRICE_MAX_DIGITS,
