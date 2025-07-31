@@ -2,6 +2,9 @@ from rest_framework.views import APIView
 
 from core.authorization import Permission, require_permission
 from core.decorators import forge
+from core.exceptions import BadRequest
+from core.helpers.image_upload import ImageUpload
+from core.helpers.image_utils import ImageUtils
 from core.helpers.pagination import PaginationHelper
 from core.utils import model_unwrap
 from inventory.serializers import CardPurchaseSerializer, CardQueryParams, CardSerializer, CardSimilarityParams, VendorQueryParams, VendorSerializer
@@ -58,19 +61,23 @@ class CardView(APIView):
     def post(self, request):
         body = CardSerializer.validate_request(request)
 
-        # # TODO: Get Image from request
-        # # TODO: Validate Image
-        # # TODO: Upload Image to Supabase and Get URL (core.helpers.image_upload.py)
-        # image = request.FILES.get("image")
+        image = request.FILES.get("image")
+        if not image:
+            raise BadRequest("Image is required")
+
+        perceptual_hash = ImageUtils.generate_perceptual_hash(image)
+
+        image_url = ImageUpload.upload_image_and_get_url(image)
 
         CardService.create_card(
             vendor_id=body.get_value("vendor_id"),
             staff=request.staff,
-            image=body.get_value("image"),
+            image_url=image_url,
             cost_price=body.get_value("cost_price"),
             sell_price=body.get_value("sell_price"),
             max_discount=body.get_value("max_discount"),
             quantity=body.get_value("quantity"),
+            perceptual_hash=perceptual_hash,
         )
 
         return {"message": "Card created successfully"}

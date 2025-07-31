@@ -25,21 +25,17 @@ class CardService:
         return Card.objects.all().order_by("barcode")
 
     @staticmethod
-    @transaction.atomic  # Ensures both the Card and its first transaction are created successfully
-    def create_card(vendor_id, staff, image, cost_price, sell_price, max_discount, quantity):
-        """
-        Handles the business logic for creating a new card and its initial inventory transaction.
-        """
+    @transaction.atomic
+    def create_card(vendor_id, staff, image_url, cost_price, sell_price, max_discount, quantity, perceptual_hash):
         # 1. Generate unique identifiers
         barcode = ImageUtils.generate_unique_barcode(Card)
-        perceptual_hash = ImageUtils.generate_perceptual_hash(image)
 
         vendor = VendorService.get_vendor_by_id(vendor_id)
 
         # 2. Create the card instance
         card = Card.objects.create(
             vendor=vendor,
-            image=image,
+            image=image_url,
             cost_price=cost_price,
             sell_price=sell_price,
             max_discount=max_discount,

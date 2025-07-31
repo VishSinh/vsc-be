@@ -19,22 +19,24 @@ class ImageUpload:
         config=Config(s3={"addressing_style": "path"}),
     )
 
-    def verify_image(self, image: InMemoryUploadedFile):
+    @staticmethod
+    def verify_image(image: InMemoryUploadedFile):
         if image.size > 10 * 1024 * 1024:
             raise BadRequest("Image is too large")
 
         if image.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
             raise BadRequest("Invalid image extension")
 
-    def upload_image(self, image: InMemoryUploadedFile):
-        self.verify_image(image)
+    @staticmethod
+    def upload_image_and_get_url(image: InMemoryUploadedFile):
+        ImageUpload.verify_image(image)
 
         try:
             extension = os.path.splitext(image.name)[1].lstrip(".")
 
             object_key = f"{settings.S3_IMAGE_FOLDER}/{shortuuid.uuid()}.{extension}"
 
-            self.client.put_object(
+            ImageUpload.client.put_object(
                 Bucket=settings.BUCKET_NAME,
                 Key=object_key,
                 Body=image.file,
