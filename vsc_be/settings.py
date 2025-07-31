@@ -138,8 +138,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Authentication Skip Patterns (endpoints that don't require authentication)
 SKIP_AUTH_PATTERNS = [
-    # Authentication endpoints
     "/api/v1/auth/login/",
+    # "/admin/"
 ]
 
 

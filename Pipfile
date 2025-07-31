@@ -20,6 +20,7 @@ django-cors-headers = "*"
 boto3 = "*"
 shortuuid = "*"
 dj-database-url = "*"
+gunicorn = "*"
 
 [dev-packages]
 black = "*"
