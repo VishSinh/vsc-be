@@ -1,9 +1,9 @@
 from datetime import timedelta
 from typing import Any, Tuple
 
+import jwt
 from django.conf import settings
 from django.utils import timezone
-from jose import jwt
 from passlib.context import CryptContext
 
 from core.exceptions import Unauthorized
@@ -21,20 +21,33 @@ class Security:
         return bool(Security._pwd_context.verify(password, hashed_password))
 
     @staticmethod
-    def create_token(data: dict) -> str:
-        data["exp"] = timezone.now() + timedelta(minutes=settings.TOKEN_EXPIRE_MINUTES)
-        return str(jwt.encode(data, settings.TOKEN_SECRET, algorithm=settings.ALGORITHM))
+    def create_token(data: dict):
+        """Create JWT token with expiration"""
+        payload = {
+            "staff_id": data["staff_id"],
+            "role": data["role"],
+            "exp": timezone.now() + timedelta(minutes=settings.TOKEN_EXPIRE_MINUTES),
+            "iat": timezone.now(),
+        }
+        return jwt.encode(payload, settings.TOKEN_SECRET, algorithm=settings.ALGORITHM)
 
     @staticmethod
     def verify_token(token: str) -> Tuple[str, Any]:
+        """Verify JWT token and return staff_id and expiry"""
         try:
-            decoded_token = jwt.decode(token, settings.TOKEN_SECRET, algorithms=[settings.ALGORITHM])
-            staff_id = decoded_token.get("staff_id")
-            expiry = timezone.datetime.fromtimestamp(decoded_token.get("exp"), tz=timezone.utc)
+            payload = jwt.decode(token, settings.TOKEN_SECRET, algorithms=[settings.ALGORITHM])
 
-            if expiry < timezone.now():
-                raise Unauthorized("Token expired")
+            staff_id = payload.get("staff_id")
+            if not staff_id:
+                raise Unauthorized("Invalid token: missing staff_id")
 
-            return staff_id, expiry
+            # JWT library handles expiration automatically
+            # If token is expired, jwt.decode will raise jwt.ExpiredSignatureError
+
+            return staff_id, payload.get("exp")
+        except jwt.ExpiredSignatureError:
+            raise Unauthorized("Token expired")
+        except jwt.InvalidTokenError as e:
+            raise Unauthorized(f"Invalid token: {str(e)}")
         except Exception as e:
-            raise Unauthorized("Error verifying token: " + str(e))
+            raise Unauthorized(f"Error verifying token: {str(e)}")
