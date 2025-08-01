@@ -21,6 +21,7 @@ boto3 = "*"
 shortuuid = "*"
 dj-database-url = "*"
 gunicorn = "*"
+pre-commit = "*"
 
 [dev-packages]
 black = "*"
@@ -34,4 +35,4 @@ djangorestframework-stubs = "*"
 pre-commit = "*"
 
 [requires]
-python_version = "3.9"
+python_version = "3.11"
