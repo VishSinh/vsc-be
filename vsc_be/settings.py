@@ -5,6 +5,10 @@ from typing import List
 import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATIC_URL = "/static/"
+
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 # =================================================
@@ -71,10 +75,12 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    # Middlewares
+    # Custom Middlewares
     "vsc_be.middlewares.auth_middleware.AuthMiddleware",
     "vsc_be.middlewares.exception_middleware.ExceptionMiddleware",
     "vsc_be.middlewares.logging_middleware.LoggingMiddleware",
+    # Third Party Middlewares
+    "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
 ROOT_URLCONF = "vsc_be.urls"
