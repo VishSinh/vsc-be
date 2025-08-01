@@ -7,7 +7,14 @@ from core.helpers.image_upload import ImageUpload
 from core.helpers.image_utils import ImageUtils
 from core.helpers.pagination import PaginationHelper
 from core.utils import model_unwrap
-from inventory.serializers import CardPurchaseSerializer, CardQueryParams, CardSerializer, CardSimilarityParams, VendorQueryParams, VendorSerializer
+from inventory.serializers import (
+    CardPurchaseSerializer,
+    CardQueryParams,
+    CardSerializer,
+    CardSimilaritySerializer,
+    VendorQueryParams,
+    VendorSerializer,
+)
 from inventory.services import CardService, VendorService
 
 
@@ -85,10 +92,14 @@ class CardView(APIView):
 
 class CardSimilarityView(APIView):
     @forge
-    def get(self, request):
-        params = CardSimilarityParams.validate_params(request)
+    def post(self, request):
+        CardSimilaritySerializer.validate_request(request)
 
-        cards = CardService.find_similar_cards(params.get_value("image"))
+        image = request.FILES.get("image")
+        if not image:
+            raise BadRequest("Image is required")
+
+        cards = CardService.find_similar_cards(image)
         return model_unwrap(cards)
 
 

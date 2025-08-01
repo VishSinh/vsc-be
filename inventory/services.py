@@ -1,3 +1,4 @@
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import transaction
 
 from core.exceptions import Conflict, ResourceNotFound
@@ -50,8 +51,7 @@ class CardService:
         return card
 
     @staticmethod
-    def find_similar_cards(image):
-        """Finds cards with a matching perceptual hash."""
+    def find_similar_cards(image: InMemoryUploadedFile):
         perceptual_hash = ImageUtils.generate_perceptual_hash(image)
         return Card.objects.filter(perceptual_hash=perceptual_hash)
 

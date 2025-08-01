@@ -20,8 +20,8 @@ class CardQueryParams(ParamSerializer):
     page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
 
 
-class CardSimilarityParams(ParamSerializer):
-    image = serializers.URLField(required=True)
+# class CardSimilarityParams(ParamSerializer):
+#     image = serializers.URLField(required=True)
 
 
 # ================================================
@@ -58,3 +58,7 @@ class CardSerializer(BaseSerializer):
 
 class CardPurchaseSerializer(BaseSerializer):
     quantity = serializers.IntegerField(required=True, min_value=0)
+
+
+class CardSimilaritySerializer(BaseSerializer):
+    image = serializers.ImageField(required=True)

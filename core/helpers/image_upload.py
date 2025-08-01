@@ -21,8 +21,11 @@ class ImageUpload:
 
     @staticmethod
     def verify_image(image: InMemoryUploadedFile):
-        if image.size > 10 * 1024 * 1024:
+        if image.size > 10 * 1024 * 1024:  # 10MB
             raise BadRequest("Image is too large")
+
+        if image.size < 10 * 1024:  # 10KB
+            raise BadRequest("Image is too small")
 
         if image.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
             raise BadRequest("Invalid image extension")
@@ -31,9 +34,10 @@ class ImageUpload:
     def upload_image_and_get_url(image: InMemoryUploadedFile):
         ImageUpload.verify_image(image)
 
+        image.file.seek(0)  # Reset file pointer to beginning,
+
         try:
             extension = os.path.splitext(image.name)[1].lstrip(".")
-
             object_key = f"{settings.S3_IMAGE_FOLDER}/{shortuuid.uuid()}.{extension}"
 
             ImageUpload.client.put_object(
@@ -42,8 +46,6 @@ class ImageUpload:
                 Body=image.file,
                 ContentType=image.content_type,
             )
-
-            print("Image uploaded to S3")
 
             return f"{settings.S3_DOWNLOAD_URL}/{object_key}"
         except Exception:
