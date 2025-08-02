@@ -5,10 +5,11 @@ from rest_framework.views import APIView
 from accounts.services import CustomerService
 from core.authorization import Permission, require_permission
 from core.decorators import forge
-from core.exceptions import ResourceNotFound
+from core.helpers.pagination import PaginationHelper
 from core.utils import model_unwrap
-from orders.serializers import OrderCreateSerializer
+from orders.serializers import OrderCreateSerializer, OrderQueryParams
 from orders.services import BillService, OrderService
+from production.models import BoxOrder, PrintingJob
 from production.services import BoxOrderService, PrintingJobService
 
 
@@ -18,28 +19,71 @@ class OrderView(APIView):
         def weave(order, order_items):
             order_data = model_unwrap(order)
 
+            # Get all order item IDs for bulk queries
+            order_item_ids = [item.id for item in order_items]
+
+            # Bulk fetch production data
+            box_orders = BoxOrderService.get_box_orders_bulk(order_item_ids)
+            printing_jobs = PrintingJobService.get_printing_jobs_bulk(order_item_ids)
+
+            # Create lookup maps for efficient access
+            box_orders_map: dict[int, list[BoxOrder]] = {}
+            printing_jobs_map: dict[int, list[PrintingJob]] = {}
+
+            for box_order in box_orders:
+                if box_order.order_item_id not in box_orders_map:
+                    box_orders_map[box_order.order_item_id] = []
+                box_orders_map[box_order.order_item_id].append(box_order)
+
+            for printing_job in printing_jobs:
+                if printing_job.order_item_id not in printing_jobs_map:
+                    printing_jobs_map[printing_job.order_item_id] = []
+                printing_jobs_map[printing_job.order_item_id].append(printing_job)
+
             order_items_data = []
             for order_item in order_items:
                 item_data = model_unwrap(order_item)
 
                 if order_item.requires_box:
-                    box_orders = BoxOrderService.get_box_orders_by_order_item_id(order_item.id)
-                    item_data["box_orders"] = model_unwrap(box_orders)
+                    item_data["box_orders"] = model_unwrap(box_orders_map.get(order_item.id, []))
 
                 if order_item.requires_printing:
-                    printing_jobs = PrintingJobService.get_printing_jobs_by_order_item_id(order_item.id)
-                    item_data["printing_jobs"] = model_unwrap(printing_jobs)
+                    item_data["printing_jobs"] = model_unwrap(printing_jobs_map.get(order_item.id, []))
 
                 order_items_data.append(item_data)
 
-            return {"order": order_data, "order_items": order_items_data}
+            order_data["order_items"] = order_items_data
+
+            return order_data
+
+        #########################################################
+        #########################################################
+        #########################################################
 
         if order_id:
-            order = OrderService.get_order_by_id(order_id)
-            order_items = OrderService.get_order_items_by_order_id(order_id)
+            order, order_items = OrderService.get_order_with_items(order_id)
             return weave(order, order_items)
 
-        raise ResourceNotFound("Order ID or appropriate query parameters are required")
+        #########################################################
+
+        params = OrderQueryParams.validate_params(request)
+
+        if params.get_value("customer_id"):
+            orders_queryset = OrderService.get_orders_by_customer_id(params.get_value("customer_id"))
+        elif params.get_value("order_date"):
+            orders_queryset = OrderService.get_orders_by_order_date(params.get_value("order_date"))
+        else:
+            orders_queryset = OrderService.get_orders()
+
+        orders, page_info = PaginationHelper.paginate_queryset(orders_queryset, params.get_value("page"), params.get_value("page_size"))
+
+        orders_with_items = OrderService.get_orders_with_items_bulk(orders)
+
+        weaved_orders = []
+        for order_data in orders_with_items:
+            weaved_orders.append(weave(order_data["order"], order_data["order_items"]))
+
+        return weaved_orders, page_info
 
     @forge
     @require_permission(Permission.ORDER_CREATE)

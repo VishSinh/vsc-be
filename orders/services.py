@@ -61,10 +61,54 @@ class OrderService:
 
     @staticmethod
     def get_order_items_by_order_id(order_id):
-        if not (order_items := OrderItem.objects.filter(order=order_id)):
-            raise ResourceNotFound("Order items not found")
+        """Get order items for a specific order"""
+        return OrderItem.objects.filter(order=order_id)
 
-        return order_items
+    @staticmethod
+    def get_orders_by_customer_id(customer_id):
+        """Get orders filtered by customer ID"""
+        return Order.objects.filter(customer_id=customer_id).order_by("-created_at")
+
+    @staticmethod
+    def get_orders_by_order_date(order_date):
+        """Get orders filtered by order date"""
+        return Order.objects.filter(order_date__date=order_date).order_by("-created_at")
+
+    @staticmethod
+    def get_orders():
+        """Get all orders ordered by creation date"""
+        return Order.objects.all().order_by("-created_at")
+
+    @staticmethod
+    def get_order_with_items(order_id):
+        """Get order with all related data efficiently"""
+        order = OrderService.get_order_by_id(order_id)
+        order_items = OrderService.get_order_items_by_order_id(order_id)
+        return order, order_items
+
+    @staticmethod
+    def get_orders_with_items_bulk(orders):
+        """Get multiple orders with their items using bulk queries"""
+        # Get all order IDs
+        order_ids = [order.id for order in orders]
+
+        # Get all order items for these orders in one query
+        all_order_items = OrderItem.objects.filter(order_id__in=order_ids)
+
+        # Group order items by order_id
+        order_items_map: dict[int, list[OrderItem]] = {}
+        for item in all_order_items:
+            if item.order_id not in order_items_map:
+                order_items_map[item.order_id] = []
+            order_items_map[item.order_id].append(item)
+
+        # Create result with orders and their items
+        result = []
+        for order in orders:
+            order_items = order_items_map.get(order.id, [])
+            result.append({"order": order, "order_items": order_items})
+
+        return result
 
 
 class BillService:

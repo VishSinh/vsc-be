@@ -21,7 +21,6 @@ boto3 = "*"
 shortuuid = "*"
 dj-database-url = "*"
 gunicorn = "*"
-pre-commit = "*"
 whitenoise = "*"
 
 [dev-packages]

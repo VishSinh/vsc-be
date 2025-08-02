@@ -1,4 +1,4 @@
-from core.exceptions import Conflict, ResourceNotFound
+from core.exceptions import Conflict
 from production.models import BoxOrder, PrintingJob
 
 
@@ -27,10 +27,12 @@ class BoxOrderService:
 
     @staticmethod
     def get_box_orders_by_order_item_id(order_item_id):
-        if not (box_orders := BoxOrder.objects.filter(order_item=order_item_id)):
-            raise ResourceNotFound("Box orders not found")
+        return BoxOrder.objects.filter(order_item=order_item_id)
 
-        return box_orders
+    @staticmethod
+    def get_box_orders_bulk(order_item_ids):
+        """Get box orders for multiple order items in one query"""
+        return BoxOrder.objects.filter(order_item_id__in=order_item_ids)
 
 
 class PrintingJobService:
@@ -56,7 +58,9 @@ class PrintingJobService:
 
     @staticmethod
     def get_printing_jobs_by_order_item_id(order_item_id):
-        if not (printing_jobs := PrintingJob.objects.filter(order_item=order_item_id)):
-            raise ResourceNotFound("Printing jobs not found")
+        return PrintingJob.objects.filter(order_item=order_item_id)
 
-        return printing_jobs
+    @staticmethod
+    def get_printing_jobs_bulk(order_item_ids):
+        """Get printing jobs for multiple order items in one query"""
+        return PrintingJob.objects.filter(order_item_id__in=order_item_ids)

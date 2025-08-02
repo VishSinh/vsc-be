@@ -1,7 +1,16 @@
 from rest_framework import serializers
 
+from core.constants import PAGINATION_DEFAULT_PAGE, PAGINATION_DEFAULT_PAGE_SIZE
 from core.helpers.base_serializer import BaseSerializer
+from core.helpers.param_serializer import ParamSerializer
 from production.models import BoxOrder
+
+
+class OrderQueryParams(ParamSerializer):
+    customer_id = serializers.UUIDField(required=False)
+    order_date = serializers.DateTimeField(required=False)
+    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
+    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
 
 
 class OrderCreateSerializer(BaseSerializer):
