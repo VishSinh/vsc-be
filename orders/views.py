@@ -94,6 +94,7 @@ class OrderView(APIView):
         print("body", body)
 
         staff = request.staff
+        name = body.get_value("name")
         customer = CustomerService.get_customer_by_id(body.get_value("customer_id"))
         order_date = body.get_value("order_date", timezone.now())
         delivery_date = body.get_value("delivery_date")
@@ -101,7 +102,7 @@ class OrderView(APIView):
         special_instruction = body.get_value("special_instruction", "")
 
         # Create Order
-        order = OrderService.create_order(customer, staff, order_date, delivery_date, special_instruction)
+        order = OrderService.create_order(customer, staff, name, order_date, delivery_date, special_instruction)
 
         # Create Order Items and Production Services
         for item in order_items:

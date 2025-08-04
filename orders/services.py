@@ -40,8 +40,12 @@ class OrderService:
 
     @staticmethod
     @transaction.atomic
-    def create_order(customer, staff, order_date, delivery_date, special_instruction):
+    def create_order(customer, staff, name, order_date, delivery_date, special_instruction):
+        if order_date > delivery_date:
+            raise Conflict("Order date cannot be greater than delivery date")
+
         order = Order.objects.create(
+            name=name,
             customer=customer,
             staff=staff,
             order_date=order_date,

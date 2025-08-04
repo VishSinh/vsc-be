@@ -46,6 +46,7 @@ def forge(func):
             if isinstance(result, tuple) and len(result) == 2:
                 if isinstance(result[1], dict):
                     response_body, pagination_info = result
+
                     return APIResponse(data=response_body, pagination=pagination_info).response()
 
                 response_body, status_code = result

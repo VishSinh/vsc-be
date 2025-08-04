@@ -43,10 +43,13 @@ def model_unwrap(instance, fields=None, exclude=None, include_timestamps=False):
         if field_name in exclude_set:
             continue
 
-        # Handle ForeignKey and OneToOneField by just including the related object's id
+        # Handle ForeignKey and OneToOneField by including the related object's id and name
         if isinstance(field, (ForeignKey, OneToOneField)):
             related_obj = getattr(instance, field_name)
             data[f"{field_name}_id"] = related_obj.pk if related_obj is not None else None
+            # Include name if the related model has a 'name' field
+            if related_obj is not None and hasattr(related_obj, "name"):
+                data[f"{field_name}_name"] = related_obj.name
         else:
             data[field_name] = getattr(instance, field_name)
     return data

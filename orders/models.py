@@ -26,6 +26,7 @@ class Order(models.Model):
         DELIVERED = "DELIVERED", "Delivered"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=TEXT_LENGTH)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="orders")
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name="orders")
     order_date = models.DateTimeField(auto_now_add=True)

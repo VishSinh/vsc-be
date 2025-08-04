@@ -33,7 +33,7 @@ class APIResponse:
             "success": self.success,
         }
 
-        if self.data:
+        if self.data or self.data == []:
             response_data["data"] = self.data
 
         if self.error:

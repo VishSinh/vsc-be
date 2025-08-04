@@ -27,6 +27,7 @@ class OrderCreateSerializer(BaseSerializer):
         total_printing_cost = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True, default=0)
 
     customer_id = serializers.UUIDField(required=True)
+    name = serializers.CharField(required=True)
     order_items = serializers.ListField(child=OrderItems(), required=True)
     order_date = serializers.DateTimeField(required=False)
     delivery_date = serializers.DateTimeField(required=True)
