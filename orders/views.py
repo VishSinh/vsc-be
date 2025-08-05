@@ -7,64 +7,30 @@ from core.authorization import Permission, require_permission
 from core.decorators import forge
 from core.helpers.pagination import PaginationHelper
 from core.utils import model_unwrap
-from orders.serializers import OrderCreateSerializer, OrderQueryParams
-from orders.services import BillService, OrderService
-from production.models import BoxOrder, PrintingJob
+from orders.serializers import BillQueryParams, OrderCreateSerializer, OrderQueryParams, PaymentCreateSerializer, PaymentQueryParams
+from orders.services import BillService, OrderService, PaymentService
 from production.services import BoxOrderService, PrintingJobService
 
 
 class OrderView(APIView):
     @forge
     def get(self, request, order_id=None):
-        def weave(order, order_items):
+        def weave(order):
             order_data = model_unwrap(order)
-
-            # Get all order item IDs for bulk queries
-            order_item_ids = [item.id for item in order_items]
-
-            # Bulk fetch production data
-            box_orders = BoxOrderService.get_box_orders_bulk(order_item_ids)
-            printing_jobs = PrintingJobService.get_printing_jobs_bulk(order_item_ids)
-
-            # Create lookup maps for efficient access
-            box_orders_map: dict[int, list[BoxOrder]] = {}
-            printing_jobs_map: dict[int, list[PrintingJob]] = {}
-
-            for box_order in box_orders:
-                if box_order.order_item_id not in box_orders_map:
-                    box_orders_map[box_order.order_item_id] = []
-                box_orders_map[box_order.order_item_id].append(box_order)
-
-            for printing_job in printing_jobs:
-                if printing_job.order_item_id not in printing_jobs_map:
-                    printing_jobs_map[printing_job.order_item_id] = []
-                printing_jobs_map[printing_job.order_item_id].append(printing_job)
-
             order_items_data = []
-            for order_item in order_items:
+            for order_item in order.order_items.all():
                 item_data = model_unwrap(order_item)
-
                 if order_item.requires_box:
-                    item_data["box_orders"] = model_unwrap(box_orders_map.get(order_item.id, []))
-
+                    item_data["box_orders"] = model_unwrap(order_item.box_orders.all())
                 if order_item.requires_printing:
-                    item_data["printing_jobs"] = model_unwrap(printing_jobs_map.get(order_item.id, []))
-
+                    item_data["printing_jobs"] = model_unwrap(order_item.printing_jobs.all())
                 order_items_data.append(item_data)
-
             order_data["order_items"] = order_items_data
-
             return order_data
 
-        #########################################################
-        #########################################################
-        #########################################################
-
         if order_id:
-            order, order_items = OrderService.get_order_with_items(order_id)
-            return weave(order, order_items)
-
-        #########################################################
+            order = OrderService.get_order_by_id(order_id)
+            return weave(order)
 
         params = OrderQueryParams.validate_params(request)
 
@@ -77,11 +43,7 @@ class OrderView(APIView):
 
         orders, page_info = PaginationHelper.paginate_queryset(orders_queryset, params.get_value("page"), params.get_value("page_size"))
 
-        orders_with_items = OrderService.get_orders_with_items_bulk(orders)
-
-        weaved_orders = []
-        for order_data in orders_with_items:
-            weaved_orders.append(weave(order_data["order"], order_data["order_items"]))
+        weaved_orders = [weave(order) for order in orders]
 
         return weaved_orders, page_info
 
@@ -136,3 +98,89 @@ class OrderView(APIView):
         BillService.create_bill(order)
 
         return {"message": "Order created successfully"}
+
+
+class BillView(APIView):
+    @forge
+    def get(self, request, bill_id=None):
+        def weave(bill_details):
+            bill_instance = bill_details["bill_instance"]
+            detailed_items = bill_details["detailed_order_items"]
+            summary = bill_details["summary"]
+
+            serialized_order_items = []
+            for item_data in detailed_items:
+                serialized_item = model_unwrap(item_data["item_details"])
+                serialized_item["calculated_costs"] = {k: f"{v:.2f}" for k, v in item_data["calculated_costs"].items()}
+                # serialized_item["box_orders"] = model_unwrap(item_data["box_orders"])
+                # serialized_item["printing_jobs"] = model_unwrap(item_data["printing_jobs"])
+                serialized_order_items.append(serialized_item)
+
+            serialized_bill = model_unwrap(bill_instance)
+            serialized_bill["order"] = model_unwrap(bill_instance.order)
+            # serialized_bill["order"]["customer"] = model_unwrap(bill_instance.order.customer)
+            # serialized_bill["order"]["staff"] = model_unwrap(bill_instance.order.staff)
+            serialized_bill["order"]["order_items"] = serialized_order_items
+            serialized_bill["summary"] = {k: f"{v:.2f}" for k, v in summary.items()}
+
+            return serialized_bill
+
+        if bill_id:
+            bill = BillService.get_bill_by_id(bill_id)
+            bill_details = BillService.calculate_bill_details(bill)
+            return weave(bill_details)
+
+        params = BillQueryParams.validate_params(request)
+
+        if params.get_value("order_id"):
+            bills_queryset = BillService.get_bills_by_order_id(params.get_value("order_id"))
+
+        elif params.get_value("phone"):
+            bills_queryset = BillService.get_bill_by_phone(params.get_value("phone"))
+
+        else:
+            bills_queryset = BillService.get_bills()
+
+        bills, page_info = PaginationHelper.paginate_queryset(bills_queryset, params.get_value("page"), params.get_value("page_size"))
+
+        detailed_bills = BillService.calculate_bills_details_in_bulk(bills)
+
+        weaved_bills = []
+        for bill_details in detailed_bills:
+            weaved_bills.append(weave(bill_details))
+
+        return weaved_bills, page_info
+
+
+class PaymentView(APIView):
+    @forge
+    def get(self, request, payment_id=None):
+        if payment_id:
+            payment = PaymentService.get_payment_by_id(payment_id)
+            return model_unwrap(payment)
+
+        params = PaymentQueryParams.validate_params(request)
+
+        if params.get_value("bill_id"):
+            payments_queryset = PaymentService.get_payments_by_bill_id(params.get_value("bill_id"))
+
+        else:
+            payments_queryset = PaymentService.get_payments()
+
+        payments, page_info = PaginationHelper.paginate_queryset(payments_queryset, params.get_value("page"), params.get_value("page_size"))
+
+        return model_unwrap(payments), page_info
+
+    @forge
+    def post(self, request):
+        body = PaymentCreateSerializer.validate_request(request)
+
+        PaymentService.create_payment(
+            body.get_value("bill_id"),
+            body.get_value("amount"),
+            body.get_value("payment_mode"),
+            body.get_value("transaction_ref", ""),
+            body.get_value("notes", ""),
+        )
+
+        return {"message": "Payment done successfully"}

@@ -1,8 +1,9 @@
 from rest_framework import serializers
 
-from core.constants import PAGINATION_DEFAULT_PAGE, PAGINATION_DEFAULT_PAGE_SIZE
+from core.constants import PAGINATION_DEFAULT_PAGE, PAGINATION_DEFAULT_PAGE_SIZE, SERIALIZER_MAX_PHONE_LENGTH, SERIALIZER_MIN_PHONE_LENGTH
 from core.helpers.base_serializer import BaseSerializer
 from core.helpers.param_serializer import ParamSerializer
+from orders.models import Payment
 from production.models import BoxOrder
 
 
@@ -11,6 +12,30 @@ class OrderQueryParams(ParamSerializer):
     order_date = serializers.DateTimeField(required=False)
     page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
     page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
+
+
+class BillQueryParams(ParamSerializer):
+    order_id = serializers.UUIDField(required=False)
+    phone = serializers.CharField(required=False, min_length=SERIALIZER_MIN_PHONE_LENGTH, max_length=SERIALIZER_MAX_PHONE_LENGTH)
+    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
+    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
+
+
+class PaymentQueryParams(ParamSerializer):
+    bill_id = serializers.UUIDField(required=False)
+    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
+    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
+
+
+#########################
+
+
+class PaymentCreateSerializer(BaseSerializer):
+    bill_id = serializers.UUIDField(required=True)
+    amount = serializers.DecimalField(required=True, max_digits=10, decimal_places=2)
+    payment_mode = serializers.ChoiceField(choices=Payment.PaymentMode.choices, required=True)
+    transaction_ref = serializers.CharField(required=False)
+    notes = serializers.CharField(required=False)
 
 
 class OrderCreateSerializer(BaseSerializer):

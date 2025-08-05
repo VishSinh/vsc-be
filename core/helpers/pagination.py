@@ -43,4 +43,4 @@ class PaginationHelper:
             "previous_page": page_obj.previous_page_number() if page_obj.has_previous() else None,
         }
 
-        return page_obj, pagination_info
+        return page_obj.object_list, pagination_info
