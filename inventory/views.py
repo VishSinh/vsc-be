@@ -76,7 +76,7 @@ class CardView(APIView):
 
         image_url = ImageUpload.upload_image_and_get_url(image)
 
-        CardService.create_card(
+        card = CardService.create_card(
             vendor_id=body.get_value("vendor_id"),
             staff=request.staff,
             image_url=image_url,
@@ -87,7 +87,10 @@ class CardView(APIView):
             perceptual_hash=perceptual_hash,
         )
 
-        return {"message": "Card created successfully"}
+        to_return = model_unwrap(card)
+        to_return["message"] = "Card created successfully"
+
+        return to_return
 
 
 class CardSimilarityView(APIView):

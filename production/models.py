@@ -78,8 +78,8 @@ class PrintingJob(models.Model):
     tracing_studio = models.ForeignKey(TracingStudio, on_delete=models.CASCADE, related_name="printing_jobs", null=True, blank=True)
     print_quantity = models.IntegerField()
     total_printing_cost = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES)
-    total_printing_expense = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES)
-    total_tracing_expense = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES)
+    total_printing_expense = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES, null=True, blank=True)
+    total_tracing_expense = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES, null=True, blank=True)
     printing_status = models.CharField(
         max_length=STATUS_LENGTH,
         choices=PrintingStatus.choices,
@@ -116,7 +116,7 @@ class BoxOrder(models.Model):
     box_type = models.CharField(max_length=BOX_TYPE_LENGTH, choices=BoxType.choices)
     box_quantity = models.IntegerField()
     total_box_cost = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES)
-    total_box_expense = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES)
+    total_box_expense = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES, null=True, blank=True)
     box_status = models.CharField(max_length=STATUS_LENGTH, choices=BoxStatus.choices, default=BoxStatus.PENDING)
     estimated_completion = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

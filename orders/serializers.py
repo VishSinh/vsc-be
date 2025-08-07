@@ -34,8 +34,8 @@ class PaymentCreateSerializer(BaseSerializer):
     bill_id = serializers.UUIDField(required=True)
     amount = serializers.DecimalField(required=True, max_digits=10, decimal_places=2)
     payment_mode = serializers.ChoiceField(choices=Payment.PaymentMode.choices, required=True)
-    transaction_ref = serializers.CharField(required=False)
-    notes = serializers.CharField(required=False)
+    transaction_ref = serializers.CharField(required=False, allow_blank=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
 
 
 class OrderCreateSerializer(BaseSerializer):
