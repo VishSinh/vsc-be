@@ -67,6 +67,7 @@ class OrderView(APIView):
         order = OrderService.create_order(customer, staff, name, order_date, delivery_date, special_instruction)
 
         # Create Order Items and Production Services
+        created_order_items = []
         for item in order_items:
             order_item = OrderService.create_order_item(
                 order=order,
@@ -76,6 +77,7 @@ class OrderView(APIView):
                 requires_box=item.get("requires_box"),
                 requires_printing=item.get("requires_printing"),
             )
+            order_item_data = model_unwrap(order_item)
 
             if item.get("requires_box"):
                 box_order = BoxOrderService.create_box_order(
@@ -84,6 +86,7 @@ class OrderView(APIView):
                     quantity=item.get("quantity"),
                     total_box_cost=item.get("total_box_cost"),
                 )
+                order_item_data["box_order"] = model_unwrap(box_order)
                 print("Created Box Order \n", box_order)
 
             if item.get("requires_printing"):
@@ -92,12 +95,19 @@ class OrderView(APIView):
                     quantity=item.get("quantity"),
                     total_printing_cost=item.get("total_printing_cost"),
                 )
+                order_item_data["printing_job"] = model_unwrap(printing_job)
                 print("Created Printing Job \n", printing_job)
+            created_order_items.append(order_item_data)
 
         # Create Bill
-        BillService.create_bill(order)
+        bill = BillService.create_bill(order)
 
-        return {"message": "Order created successfully"}
+        order_data = model_unwrap(order)
+        order_data["order_items"] = created_order_items
+
+        order_data["bill_id"] = model_unwrap(bill).get("id")
+
+        return order_data
 
 
 class BillView(APIView):
