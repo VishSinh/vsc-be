@@ -184,13 +184,16 @@ class PaymentView(APIView):
     @forge
     def post(self, request):
         body = PaymentCreateSerializer.validate_request(request)
+        bill_id = body.get_value("bill_id")
 
         PaymentService.create_payment(
-            body.get_value("bill_id"),
+            bill_id,
             body.get_value("amount"),
             body.get_value("payment_mode"),
             body.get_value("transaction_ref", ""),
             body.get_value("notes", ""),
         )
+
+        BillService.refresh_bill_payment_status(bill_id)
 
         return {"message": "Payment done successfully"}

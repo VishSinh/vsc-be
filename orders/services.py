@@ -249,6 +249,30 @@ class BillService:
 
         return results
 
+    @staticmethod
+    def refresh_bill_payment_status(bill_id):
+        """
+        Recalculates and updates the payment status of a bill based on associated payments.
+        """
+        bill = BillService.get_bill_by_id(bill_id)
+        bill_details = BillService.calculate_bill_details(bill)
+        total_due = bill_details["summary"]["total_with_tax"]
+
+        payments = Payment.objects.filter(bill=bill)
+        total_paid = payments.aggregate(total=models.Sum("amount"))["total"] or Decimal("0.00")
+
+        new_status = Bill.PaymentStatus.PENDING
+        if total_paid >= total_due:
+            new_status = Bill.PaymentStatus.PAID
+        elif total_paid > 0:
+            new_status = Bill.PaymentStatus.PARTIAL
+
+        if bill.payment_status != new_status:
+            bill.payment_status = new_status
+            bill.save(update_fields=["payment_status", "updated_at"])
+
+        return bill
+
 
 class PaymentService:
     @staticmethod
@@ -271,10 +295,12 @@ class PaymentService:
         if not BillService.check_bill_exists(bill_id):
             raise ResourceNotFound("Bill not found")
 
-        Payment.objects.create(
+        payment = Payment.objects.create(
             bill_id=bill_id,
             amount=amount,
             payment_mode=payment_mode,
             transaction_ref=transaction_ref,
             notes=notes,
         )
+
+        return payment
