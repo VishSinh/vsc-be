@@ -33,6 +33,7 @@ mypy = "*"
 django-stubs = "*"
 djangorestframework-stubs = "*"
 pre-commit = "*"
+types-python-dateutil = "*"
 
 [requires]
 python_version = "3.11"

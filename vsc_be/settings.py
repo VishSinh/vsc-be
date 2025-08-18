@@ -43,6 +43,8 @@ S3_IMAGE_FOLDER = os.getenv("S3_IMAGE_FOLDER")
 
 # Business Settings
 TAX_PERCENTAGE = float(os.getenv("TAX_PERCENTAGE", 0.0))
+LOW_STOCK_THRESHOLD = int(os.getenv("LOW_STOCK_THRESHOLD", 250))
+OUT_OF_STOCK_THRESHOLD = int(os.getenv("OUT_OF_STOCK_THRESHOLD", 50))
 # =================================================
 
 INSTALLED_APPS = [
