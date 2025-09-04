@@ -12,6 +12,7 @@ from inventory.serializers import (
     CardQueryParams,
     CardSerializer,
     CardSimilaritySerializer,
+    CardUpdateSerializer,
     VendorQueryParams,
     VendorSerializer,
 )
@@ -91,6 +92,25 @@ class CardView(APIView):
         to_return["message"] = "Card created successfully"
 
         return to_return
+
+    @forge
+    @require_permission(Permission.CARD_UPDATE)
+    def patch(self, request, card_id):
+        body = CardUpdateSerializer.validate_request(request)
+
+        updates = {"image": request.FILES.get("image"), **body.validated_data}
+
+        card = CardService.update_card(card_id, **updates)
+
+        to_return = model_unwrap(card)
+        to_return["message"] = "Card updated successfully"
+        return to_return
+
+    @forge
+    @require_permission(Permission.CARD_DELETE)
+    def delete(self, request, card_id):
+        CardService.deactivate_card(card_id)
+        return {"message": "Card deleted successfully"}
 
 
 class CardSimilarityView(APIView):

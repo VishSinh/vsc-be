@@ -19,7 +19,7 @@ class AnalyticsService:
         This helps in making timely decisions about reordering popular items before they are gone.
         The threshold for what's considered "low stock" is managed in the project settings.
         """
-        return Card.objects.filter(quantity__gt=0, quantity__lte=settings.LOW_STOCK_THRESHOLD).count()
+        return Card.objects.filter(quantity__gt=0, quantity__lte=settings.LOW_STOCK_THRESHOLD, is_active=True).count()
 
     @staticmethod
     def get_out_of_stock_items():
@@ -27,7 +27,7 @@ class AnalyticsService:
         Counts the number of card types that are completely out of stock (quantity is zero).
         This is a critical metric for identifying missed sales opportunities.
         """
-        return Card.objects.filter(quantity__lte=settings.OUT_OF_STOCK_THRESHOLD).count()
+        return Card.objects.filter(quantity__lte=settings.OUT_OF_STOCK_THRESHOLD, is_active=True).count()
 
     @staticmethod
     def get_total_orders_current_month():
@@ -202,11 +202,11 @@ class AnalyticsService:
 
     @staticmethod
     def get_low_stock_cards_list():
-        return Card.objects.filter(quantity__gt=0, quantity__lte=settings.LOW_STOCK_THRESHOLD).select_related("vendor")
+        return Card.objects.filter(quantity__gt=0, quantity__lte=settings.LOW_STOCK_THRESHOLD, is_active=True).select_related("vendor")
 
     @staticmethod
     def get_out_of_stock_cards_list():
-        return Card.objects.filter(quantity=0).select_related("vendor")
+        return Card.objects.filter(quantity=0, is_active=True).select_related("vendor")
 
     @staticmethod
     def get_pending_orders_list():

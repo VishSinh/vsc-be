@@ -56,6 +56,15 @@ class CardSerializer(BaseSerializer):
     vendor_id = serializers.UUIDField(required=True)
 
 
+class CardUpdateSerializer(BaseSerializer):
+    image = serializers.ImageField(required=False)
+    cost_price = serializers.DecimalField(required=False, max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES, min_value=0)
+    sell_price = serializers.DecimalField(required=False, max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES, min_value=0)
+    max_discount = serializers.DecimalField(required=False, max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES, min_value=0)
+    quantity = serializers.IntegerField(required=False, min_value=0)
+    vendor_id = serializers.UUIDField(required=False)
+
+
 class CardPurchaseSerializer(BaseSerializer):
     quantity = serializers.IntegerField(required=True, min_value=0)
 

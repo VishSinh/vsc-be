@@ -2,6 +2,7 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import transaction
 
 from core.exceptions import Conflict, ResourceNotFound
+from core.helpers.image_upload import ImageUpload
 from core.helpers.image_utils import ImageUtils
 from inventory.models import Card, InventoryTransaction, Vendor
 
@@ -9,21 +10,21 @@ from inventory.models import Card, InventoryTransaction, Vendor
 class CardService:
     @staticmethod
     def get_card_by_id(card_id):
-        if not (card := Card.objects.filter(id=card_id).first()):
+        if not (card := Card.objects.filter(id=card_id, is_active=True).first()):
             raise ResourceNotFound("Card not found")
 
         return card
 
     @staticmethod
     def get_card_by_barcode(barcode):
-        if not (card := Card.objects.filter(barcode=barcode).first()):
+        if not (card := Card.objects.filter(barcode=barcode, is_active=True).first()):
             raise ResourceNotFound("Card not found")
 
         return card
 
     @staticmethod
     def get_cards():
-        return Card.objects.all().order_by("barcode")
+        return Card.objects.filter(is_active=True).order_by("barcode")
 
     @staticmethod
     @transaction.atomic
@@ -58,10 +59,6 @@ class CardService:
     @staticmethod
     @transaction.atomic  # Ensures the stock update and transaction log are a single operation
     def purchase_additional_stock(card_id, quantity_change, staff):
-        """
-        Purchases additional stock for an existing card and logs the transaction.
-        This is used when buying more of an existing card from vendors.
-        """
         # Use select_for_update to lock the row and prevent race conditions
         card = Card.objects.select_for_update().filter(id=card_id).first()
         if not card:
@@ -72,6 +69,35 @@ class CardService:
 
         InventoryTransactionService.record_purchase_transaction(card, quantity_change, staff)
 
+        return card
+
+    @staticmethod
+    def update_card(card_id, **updates):
+        card = CardService.get_card_by_id(card_id)
+
+        updatable_fields = {k: v for k, v in updates.items() if v is not None}
+        for field, value in updatable_fields.items():
+            if field == "image":
+                perceptual_hash = ImageUtils.generate_perceptual_hash(value)
+                image_url = ImageUpload.upload_image_and_get_url(value)
+                card.image = image_url
+                card.perceptual_hash = perceptual_hash
+                continue
+            if field == "vendor_id":
+                vendor = VendorService.get_vendor_by_id(value)
+                card.vendor = vendor
+                continue
+
+            setattr(card, field, value)
+
+        card.save()
+        return card
+
+    @staticmethod
+    def deactivate_card(card_id):
+        card = CardService.get_card_by_id(card_id)
+        card.is_active = False
+        card.save()
         return card
 
 
