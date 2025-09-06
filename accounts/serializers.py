@@ -15,13 +15,13 @@ class CustomerQueryParams(ParamSerializer):
 class RegisterSerializer(BaseSerializer):
     name = serializers.CharField(required=True, min_length=SERIALIZER_MIN_NAME_LENGTH, max_length=SERIALIZER_MAX_NAME_LENGTH)
     phone = serializers.CharField(required=True, min_length=SERIALIZER_MIN_PHONE_LENGTH, max_length=SERIALIZER_MAX_PHONE_LENGTH)
-    password = serializers.CharField(required=True, min_length=8)
+    password = serializers.CharField(required=True, min_length=3)
     role = serializers.ChoiceField(required=True, choices=Staff.Role.choices)
 
 
 class LoginSerializer(BaseSerializer):
     phone = serializers.CharField(required=True, min_length=SERIALIZER_MIN_PHONE_LENGTH, max_length=SERIALIZER_MAX_PHONE_LENGTH)
-    password = serializers.CharField(required=True, min_length=8)
+    password = serializers.CharField(required=True, min_length=3)
 
 
 class CustomerCreateSerializer(BaseSerializer):

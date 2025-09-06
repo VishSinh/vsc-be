@@ -74,7 +74,7 @@ class OrderService:
         )
         print("Created Order Item \n", model_unwrap(order_item))
 
-        InventoryTransactionService.record_sale_transaction(card, quantity, order.staff)
+        InventoryTransactionService.record_sale_transaction(order_item)
 
         return order_item
 

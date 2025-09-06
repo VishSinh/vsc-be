@@ -114,13 +114,14 @@ class InventoryTransactionService:
         )
 
     @staticmethod
-    def record_sale_transaction(card, quantity, staff):
+    def record_sale_transaction(order_item):
         InventoryTransaction.objects.create(
-            card=card,
-            staff=staff,
+            card=order_item.card,
+            staff=order_item.order.staff,
             transaction_type=InventoryTransaction.TransactionType.SALE,
-            quantity_changed=-quantity,
-            cost_price=card.cost_price,
+            order_item=order_item,
+            quantity_changed=-order_item.quantity,
+            cost_price=order_item.card.cost_price,
             notes="Sale",
         )
 

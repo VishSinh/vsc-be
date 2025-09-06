@@ -6,7 +6,7 @@ from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
 
-from inventory.models import Card
+from inventory.models import Card, InventoryTransaction
 from orders.models import Bill, Order
 from production.models import BoxOrder, PrintingJob
 
@@ -14,27 +14,14 @@ from production.models import BoxOrder, PrintingJob
 class AnalyticsService:
     @staticmethod
     def get_low_stock_items():
-        """
-        Counts the number of card types that are running low on stock but are not yet sold out.
-        This helps in making timely decisions about reordering popular items before they are gone.
-        The threshold for what's considered "low stock" is managed in the project settings.
-        """
-        return Card.objects.filter(quantity__gt=0, quantity__lte=settings.LOW_STOCK_THRESHOLD, is_active=True).count()
+        return Card.objects.filter(quantity__gt=settings.OUT_OF_STOCK_THRESHOLD, quantity__lte=settings.LOW_STOCK_THRESHOLD, is_active=True).count()
 
     @staticmethod
     def get_out_of_stock_items():
-        """
-        Counts the number of card types that are completely out of stock (quantity is zero).
-        This is a critical metric for identifying missed sales opportunities.
-        """
         return Card.objects.filter(quantity__lte=settings.OUT_OF_STOCK_THRESHOLD, is_active=True).count()
 
     @staticmethod
     def get_total_orders_current_month():
-        """
-        Calculates the total number of orders that have been placed within the current calendar month.
-        This provides a clear view of this month's sales volume so far.
-        """
         today = timezone.now().date()
         start_of_month = today.replace(day=1)
         # To get the end of the month, we can find the first day of the next month and subtract one day.
@@ -44,11 +31,6 @@ class AnalyticsService:
 
     @staticmethod
     def get_monthly_order_change():
-        """
-        Calculates the percentage increase or decrease in the number of orders this month
-        compared to the previous full month. This is a key performance indicator for business growth.
-        It handles the edge case where there were no orders last month to avoid errors.
-        """
         today = timezone.now().date()
 
         # Current month orders
@@ -70,23 +52,14 @@ class AnalyticsService:
 
     @staticmethod
     def get_pending_orders():
-        """
-        Counts all orders that have not yet been marked as 'DELIVERED'.
-        This gives a quick overview of the current operational workload and fulfillment queue.
-        """
         return Order.objects.exclude(order_status=Order.OrderStatus.DELIVERED).count()
 
     @staticmethod
     def get_todays_orders(today: date):
-        """Provides a simple count of how many orders were placed today."""
         return Order.objects.filter(order_date__date=today).count()
 
     @staticmethod
     def get_pending_bills_count():
-        """
-        Counts all bills that are awaiting full payment (status is either PENDING or PARTIAL).
-        This is a crucial metric for tracking outstanding revenue and managing cash flow.
-        """
         return Bill.objects.filter(Q(payment_status=Bill.PaymentStatus.PENDING) | Q(payment_status=Bill.PaymentStatus.PARTIAL)).count()
 
     @staticmethod
@@ -97,7 +70,7 @@ class AnalyticsService:
         """
         # Get all orders created in the specified period
         period_orders = Order.objects.filter(order_date__date__range=[start_date, end_date]).prefetch_related(
-            "order_items__card", "order_items__printing_jobs", "order_items__box_orders"
+            "order_items__card", "order_items__printing_jobs", "order_items__box_orders", "order_items__inventory_transactions"
         )
 
         total_profit = Decimal("0.0")
@@ -125,8 +98,19 @@ class AnalyticsService:
                 if not is_ready_for_calculation:
                     break
 
-                # If ready, calculate profit for this item
-                card_sale_profit = (item.price_per_item - item.discount_amount - item.card.cost_price) * item.quantity
+                # If ready, calculate profit for this item using transaction-linked cost when available
+                inventory_transactions = getattr(item, "inventory_transactions", None)
+                if inventory_transactions and hasattr(inventory_transactions, "all"):
+                    transactions = inventory_transactions.all()
+                else:
+                    transactions = []
+
+                sale_tx = next(
+                    (tx for tx in transactions if tx.transaction_type == InventoryTransaction.TransactionType.SALE),
+                    None,
+                )
+                effective_cost_price = sale_tx.cost_price if sale_tx else item.card.cost_price
+                card_sale_profit = (item.price_per_item - item.discount_amount - effective_cost_price) * item.quantity
                 current_order_profit += card_sale_profit
 
                 for job in item.printing_jobs.all():
@@ -191,11 +175,6 @@ class AnalyticsService:
 
     @staticmethod
     def get_pending_production_counts():
-        """
-        Provides a breakdown of all production tasks that are still in progress.
-        It returns separate counts for printing jobs and box orders that have not been completed,
-        which helps in monitoring the production pipeline's workload.
-        """
         pending_printing = PrintingJob.objects.exclude(printing_status=PrintingJob.PrintingStatus.COMPLETED).count()
         pending_boxing = BoxOrder.objects.exclude(box_status=BoxOrder.BoxStatus.COMPLETED).count()
         return pending_printing, pending_boxing
