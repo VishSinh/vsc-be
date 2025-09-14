@@ -1,4 +1,4 @@
-.PHONY: install-dev format lint type-check check-all clean
+.PHONY: install-dev format lint type-check check-all clean docker-down docker-down-v docker-prune docker-reset docker-build docker-up
 
 # Install development dependencies
 install-dev:
@@ -34,3 +34,21 @@ install-hooks:
 # Run pre-commit on all files
 pre-commit-all:
 	pipenv run pre-commit run --all-files
+
+docker-down:
+	docker compose down --remove-orphans
+
+docker-down-v:
+	docker compose down -v --remove-orphans
+
+docker-prune:
+	docker system prune -af --volumes
+
+docker-reset:
+	docker compose down -v --remove-orphans && docker system prune -af --volumes
+
+docker-build:
+	docker compose build
+
+docker-up:
+	docker compose up -d --build

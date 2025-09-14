@@ -57,12 +57,14 @@ def _absolutize_media_urls(request, data):
         return data
     if isinstance(data, dict):
         return {
-            k: _absolutize_media_urls(request, v)
-            if isinstance(v, (dict, list))
-            else (
-                _absolute_media_url(request, v)
-                if isinstance(v, str) and (k == "image" or k.endswith("_image") or v.startswith("/media/") or v.startswith("media/"))
-                else v
+            k: (
+                _absolutize_media_urls(request, v)
+                if isinstance(v, (dict, list))
+                else (
+                    _absolute_media_url(request, v)
+                    if isinstance(v, str) and (k == "image" or k.endswith("_image") or v.startswith("/media/") or v.startswith("media/"))
+                    else v
+                )
             )
             for k, v in data.items()
         }
