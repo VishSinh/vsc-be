@@ -1,6 +1,7 @@
 import json
 from typing import Any
 
+from django.conf import settings
 from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
 
@@ -10,14 +11,14 @@ class LoggingMiddleware:
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
-        # Log incoming request
-        self._log_request(request)
+        if getattr(settings, "ENABLE_API_LOGGING", False):
+            self._log_request(request)
 
         # Get response
         response = self.get_response(request)
 
-        # Log outgoing response
-        self._log_response(request, response)
+        if getattr(settings, "ENABLE_API_LOGGING", False):
+            self._log_response(request, response)
 
         return response
 

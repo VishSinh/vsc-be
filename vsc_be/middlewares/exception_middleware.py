@@ -2,6 +2,7 @@ import json
 from typing import Any
 
 from django.http import HttpRequest, HttpResponse
+from django.http.response import HttpResponseBase
 from rest_framework import status
 
 from core.helpers.api_response import APIResponse
@@ -14,7 +15,7 @@ class ExceptionMiddleware:
     def __call__(self, request: HttpRequest) -> HttpResponse:
         response = self.get_response(request)
 
-        if not isinstance(response, HttpResponse):
+        if not isinstance(response, HttpResponseBase):
             response = HttpResponse(
                 content=json.dumps(response),
                 content_type="application/json",

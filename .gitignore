@@ -72,3 +72,8 @@ drf_example
 *.swp
 *.swo
 *~
+
+
+# Media files
+media/
+staticfiles/

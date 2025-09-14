@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import List
 
-import dj_database_url
+from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
@@ -15,15 +15,15 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # Environment Variables
 # =================================================
 # General Settings
-SECRET_KEY = os.getenv("SECRET_KEY")
-DEBUG = os.getenv("DEBUG") == "True"
-SESSION_SECRET_KEY = os.getenv("SESSION_SECRET_KEY")
-ALLOWED_HOSTS: List[str] = os.getenv("ALLOWED_HOSTS", "").split(",")
+SECRET_KEY = config("SECRET_KEY", default="")
+DEBUG = config("DEBUG", default=False, cast=bool)
+SESSION_SECRET_KEY = config("SESSION_SECRET_KEY", default="")
+ALLOWED_HOSTS: List[str] = config("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
 
 # Authentication Settings
-TOKEN_SECRET = os.getenv("TOKEN_SECRET")
-ALGORITHM = os.getenv("ALGORITHM")
-TOKEN_EXPIRE_MINUTES = int(os.getenv("TOKEN_EXPIRE_MINUTES", 6000))
+TOKEN_SECRET = config("TOKEN_SECRET", default="")
+ALGORITHM = config("ALGORITHM", default="HS256")
+TOKEN_EXPIRE_MINUTES = config("TOKEN_EXPIRE_MINUTES", default=6000, cast=int)
 
 # Database Settings
 # DATABASE_NAME = os.getenv("DATABASE_NAME")
@@ -33,18 +33,24 @@ TOKEN_EXPIRE_MINUTES = int(os.getenv("TOKEN_EXPIRE_MINUTES", 6000))
 # DATABASE_PORT = os.getenv("DATABASE_PORT")
 
 # S3 Settings
-BUCKET_NAME = os.getenv("BUCKET_NAME")
-S3_CLIENT_ENDPOINT = os.getenv("S3_CLIENT_ENDPOINT")
-S3_CLIENT_REGION = os.getenv("S3_CLIENT_REGION")
-S3_CLIENT_ACCESS_KEY_ID = os.getenv("S3_CLIENT_ACCESS_KEY_ID")
-S3_CLIENT_SECRET_ACCESS_KEY = os.getenv("S3_CLIENT_SECRET_ACCESS_KEY")
-S3_DOWNLOAD_URL = os.getenv("S3_DOWNLOAD_URL")
-S3_IMAGE_FOLDER = os.getenv("S3_IMAGE_FOLDER")
+# BUCKET_NAME = os.getenv("BUCKET_NAME")
+# S3_CLIENT_ENDPOINT = os.getenv("S3_CLIENT_ENDPOINT")
+# S3_CLIENT_REGION = os.getenv("S3_CLIENT_REGION")
+# S3_CLIENT_ACCESS_KEY_ID = os.getenv("S3_CLIENT_ACCESS_KEY_ID")
+# S3_CLIENT_SECRET_ACCESS_KEY = os.getenv("S3_CLIENT_SECRET_ACCESS_KEY")
+# S3_DOWNLOAD_URL = os.getenv("S3_DOWNLOAD_URL")
+# S3_IMAGE_FOLDER = os.getenv("S3_IMAGE_FOLDER")
+
+# Media/Uploads Settings (local filesystem)
+MEDIA_URL = config("MEDIA_URL", default="/media/")
+MEDIA_ROOT = config("MEDIA_ROOT", default=os.path.join(BASE_DIR, "media"))
+PUBLIC_BASE_URL = config("PUBLIC_BASE_URL", default="")
+IMAGE_UPLOAD_FOLDER = config("IMAGE_UPLOAD_FOLDER", default="images")
 
 # Business Settings
-TAX_PERCENTAGE = float(os.getenv("TAX_PERCENTAGE", 0.0))
-LOW_STOCK_THRESHOLD = int(os.getenv("LOW_STOCK_THRESHOLD", 250))
-OUT_OF_STOCK_THRESHOLD = int(os.getenv("OUT_OF_STOCK_THRESHOLD", 50))
+TAX_PERCENTAGE = config("TAX_PERCENTAGE", default=0.0, cast=float)
+LOW_STOCK_THRESHOLD = config("LOW_STOCK_THRESHOLD", default=250, cast=int)
+OUT_OF_STOCK_THRESHOLD = config("OUT_OF_STOCK_THRESHOLD", default=50, cast=int)
 # =================================================
 
 INSTALLED_APPS = [
@@ -70,6 +76,7 @@ AUTH_USER_MODEL = "accounts.Staff"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -77,12 +84,9 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    # Custom Middlewares
     "vsc_be.middlewares.auth_middleware.AuthMiddleware",
     "vsc_be.middlewares.exception_middleware.ExceptionMiddleware",
     "vsc_be.middlewares.logging_middleware.LoggingMiddleware",
-    # Third Party Middlewares
-    "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
 ROOT_URLCONF = "vsc_be.urls"
@@ -106,13 +110,20 @@ WSGI_APPLICATION = "vsc_be.wsgi.application"
 
 
 DATABASES = {
-    "default": dj_database_url.config(
-        default=os.getenv("DATABASE_URL"),
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": config("DB_NAME"),
+        "USER": config("DB_USER"),
+        "PASSWORD": config("DB_PASSWORD"),
+        "HOST": config("DB_HOST"),
+        "PORT": config("DB_PORT"),
+        # Optional schema: set search_path
+        "OPTIONS": {
+            "options": f"-c search_path={config('POSTGRES_SCHEMA', default='public')},public",
+        },
+        "CONN_MAX_AGE": int(config("DB_CONN_MAX_AGE", default=600)),
+    }
 }
-
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -139,7 +150,7 @@ USE_I18N = True
 USE_TZ = True
 
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -147,10 +158,17 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Authentication Skip Patterns (endpoints that don't require authentication)
 SKIP_AUTH_PATTERNS = [
     "/api/v1/auth/login/",
+    # "/api/v1/auth/register/",
     # "/admin/"
+    "/media/",
+    "/api/v1/health/",
 ]
 
 
-CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS") == "True"
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
-CORS_ALLOWED_ORIGIN_REGEXES = os.getenv("CORS_ALLOWED_ORIGIN_REGEXES", "").split(",")
+CORS_ALLOW_CREDENTIALS = config("CORS_ALLOW_CREDENTIALS", default=False, cast=bool)
+CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="").split(",")
+CORS_ALLOWED_ORIGIN_REGEXES = config("CORS_ALLOWED_ORIGIN_REGEXES", default="").split(",")
+
+
+# API logging toggle
+ENABLE_API_LOGGING = config("ENABLE_API_LOGGING", default=False, cast=bool)
