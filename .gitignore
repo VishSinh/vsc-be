@@ -77,3 +77,6 @@ drf_example
 # Media files
 media/
 staticfiles/
+
+./schema.dot
+./schema.png
