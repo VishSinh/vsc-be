@@ -1,4 +1,4 @@
-.PHONY: install-dev format lint type-check check-all clean docker-down docker-down-v docker-prune docker-reset docker-build docker-up
+.PHONY: install-dev format lint type-check check-all clean docker-down docker-down-v docker-prune docker-reset docker-build docker-up docker-restart docker-restart-build docker-up-dev docker-down-dev docker-restart-dev
 
 # Install development dependencies
 install-dev:
@@ -52,3 +52,18 @@ docker-build:
 
 docker-up:
 	docker compose up -d --build
+
+docker-restart:
+	docker compose down --remove-orphans && docker compose up -d
+
+docker-restart-build:
+	docker compose down --remove-orphans && docker compose up -d --build
+
+docker-up-dev:
+	docker compose -f compose.yaml -f compose.dev.yaml up -d --build
+
+docker-down-dev:
+	docker compose -f compose.yaml -f compose.dev.yaml down --remove-orphans
+
+docker-restart-dev:
+	docker compose -f compose.yaml -f compose.dev.yaml down --remove-orphans && docker compose -f compose.yaml -f compose.dev.yaml up -d --build

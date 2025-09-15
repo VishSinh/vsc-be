@@ -38,5 +38,6 @@ class ImageUpload:
             if public_base:
                 return f"{public_base}{settings.MEDIA_URL}{relative_path}"
             return f"{settings.MEDIA_URL}{relative_path}"
-        except Exception:
+        except Exception as e:
+            print(e)
             raise InternalServerError("Failed to upload image")

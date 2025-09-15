@@ -1,0 +1,15 @@
+services:
+  web:
+    environment:
+      - DEBUG=true
+      - ALLOWED_HOSTS=localhost,127.0.0.1,web,nginx
+    command: ["python","manage.py","runserver","0.0.0.0:8000"]
+    volumes:
+      - .:/app
+      - staticfiles:/app/staticfiles
+      - media:/app/media
+    ports:
+      - 8000:8000
+  nginx:
+    ports:
+      - 80:80
