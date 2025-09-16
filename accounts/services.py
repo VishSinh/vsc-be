@@ -21,7 +21,7 @@ class StaffService:
         hashed_password = Security.get_password_hash(password)
 
         # Create staff member
-        staff = Staff.objects.create(name=name, phone=phone, password=hashed_password, role=role)
+        staff = Staff.objects.create(username=phone, name=name, phone=phone, password=hashed_password, role=role)
 
         return staff
 
