@@ -118,7 +118,7 @@ class RolePermissions:
         Permission.AUDIT_READ,
     ]
 
-    STAFF_PERMISSIONS = [
+    SALES_PERMISSIONS = [
         # Basic operational access
         Permission.ACCOUNT_READ,
         Permission.ACCOUNT_LIST,
@@ -146,8 +146,8 @@ class AuthorizationService:
             return RolePermissions.ADMIN_PERMISSIONS
         elif staff.role == Staff.Role.MANAGER:
             return RolePermissions.MANAGER_PERMISSIONS
-        elif staff.role == Staff.Role.STAFF:
-            return RolePermissions.STAFF_PERMISSIONS
+        elif staff.role == Staff.Role.SALES:
+            return RolePermissions.SALES_PERMISSIONS
         return []
 
     @staticmethod
