@@ -5,7 +5,8 @@ from django.db import models, transaction
 
 from core.exceptions import Conflict, ResourceNotFound
 from core.utils import model_unwrap
-from inventory.services import CardService, InventoryTransactionService
+from inventory.models import Card
+from inventory.services import InventoryTransactionService
 from orders.models import Bill, Order, OrderItem, Payment
 from production.models import BoxOrder, PrintingJob
 
@@ -13,9 +14,6 @@ from production.models import BoxOrder, PrintingJob
 class OrderService:
     @staticmethod
     def get_orders_queryset():
-        """
-        Returns a base queryset for Orders with all related data pre-fetched for performance.
-        """
         return Order.objects.select_related("customer", "staff").prefetch_related(
             models.Prefetch(
                 "order_items",
@@ -34,29 +32,22 @@ class OrderService:
         return order
 
     @staticmethod
-    def get_orders_by_customer_id(customer_id):
-        """Get orders filtered by customer ID"""
-        return OrderService.get_orders_queryset().filter(customer_id=customer_id).order_by("-created_at")
-
-    @staticmethod
-    def get_orders_by_order_date(order_date):
-        """Get orders filtered by order date"""
-        return OrderService.get_orders_queryset().filter(order_date__date=order_date).order_by("-created_at")
-
-    @staticmethod
-    def get_orders():
-        """Get all orders ordered by creation date"""
-        return OrderService.get_orders_queryset().order_by("-created_at")
+    def get_orders(*, customer_id=None, order_date=None):
+        qs = OrderService.get_orders_queryset()
+        if customer_id:
+            qs = qs.filter(customer_id=customer_id)
+        if order_date:
+            qs = qs.filter(order_date__date=order_date)
+        return qs.order_by("-created_at")
 
     @staticmethod
     def create_order_item(order, card_id, discount_amount, quantity, requires_box, requires_printing):
-        card = CardService.get_card_by_id(card_id)
-
-        # Check if the required quantity is available
+        card = Card.objects.select_for_update().filter(id=card_id, is_active=True).first()
+        if not card:
+            raise ResourceNotFound("Card not found")
         if card.quantity < quantity:
             raise Conflict("Quantity in stock is less than the required quantity")
 
-        # Check if the discount amount is less than max discount
         if discount_amount > card.max_discount or discount_amount < 0:
             raise Conflict("Discount amount is not valid")
 
@@ -92,8 +83,127 @@ class OrderService:
             delivery_date=delivery_date,
             special_instruction=special_instruction,
         )
-        print("Created Order \n", model_unwrap(order))
 
+        return order
+
+    @staticmethod
+    def update_order_items(order, order_items):
+        def _adjust_order_item_quantity(order_item, new_quantity):
+            if new_quantity is None or new_quantity == order_item.quantity:
+                return
+            delta = new_quantity - order_item.quantity
+            locked_card = Card.objects.select_for_update().filter(id=order_item.card_id).first()
+            if not locked_card:
+                raise ResourceNotFound("Card not found")
+            if delta > 0:
+                if locked_card.quantity < delta:
+                    raise Conflict("Quantity in stock is less than the required quantity")
+                locked_card.quantity -= delta
+            elif delta < 0:
+                locked_card.quantity += -delta
+            locked_card.save()
+            order_item.quantity = new_quantity
+
+        def _update_discount(order_item, discount_amount):
+            if discount_amount is None:
+                return
+            if discount_amount > order_item.card.max_discount or discount_amount < 0:
+                raise Conflict("Discount amount is not valid")
+            order_item.discount_amount = discount_amount
+
+        def _handle_box_requirements(order_item, requires_box, box_type, total_box_cost):
+            previous = order_item.requires_box
+            if requires_box is not None:
+                if previous and not requires_box:
+                    from production.services import BoxOrderService
+
+                    BoxOrderService.delete_by_order_item(order_item)
+                order_item.requires_box = requires_box
+                if not previous and requires_box:
+                    from production.services import BoxOrderService
+
+                    BoxOrderService.create_box_order(order_item, box_type, order_item.quantity, total_box_cost)
+            if (
+                (box_type is not None or total_box_cost is not None)
+                and (order_item.requires_box or requires_box is True)
+                and requires_box is not False
+            ):
+                from production.services import BoxOrderService
+
+                current = BoxOrderService.get_latest_by_order_item_id(order_item.id)
+                if current:
+                    BoxOrderService.update_box_order(current, box_type=box_type, total_box_cost=total_box_cost)
+
+        def _handle_printing_requirements(order_item, requires_printing, total_printing_cost):
+            previous = order_item.requires_printing
+            if requires_printing is not None:
+                if previous and not requires_printing:
+                    from production.services import PrintingJobService
+
+                    PrintingJobService.delete_by_order_item(order_item)
+                order_item.requires_printing = requires_printing
+                if not previous and requires_printing:
+                    from production.services import PrintingJobService
+
+                    PrintingJobService.create_printing_job(order_item, order_item.quantity, total_printing_cost)
+            if total_printing_cost is not None and (order_item.requires_printing or requires_printing is True) and requires_printing is not False:
+                from production.services import PrintingJobService
+
+                current = PrintingJobService.get_latest_by_order_item_id(order_item.id)
+                if current:
+                    PrintingJobService.update_printing_job(current, total_printing_cost=total_printing_cost)
+
+        for item in order_items or []:
+            order_item = OrderItem.objects.get(id=item.get("order_item_id"), order=order)
+            _adjust_order_item_quantity(order_item, item.get("quantity"))
+            _update_discount(order_item, item.get("discount_amount"))
+            _handle_box_requirements(order_item, item.get("requires_box"), item.get("box_type"), item.get("total_box_cost"))
+            _handle_printing_requirements(order_item, item.get("requires_printing"), item.get("total_printing_cost"))
+            order_item.save()
+        return order
+
+    @staticmethod
+    def remove_order_items(order, remove_item_ids):
+        for oid in remove_item_ids or []:
+            order_item = OrderItem.objects.get(id=oid, order=order)
+            InventoryTransactionService.record_return_transaction(order_item)
+            locked_card = Card.objects.select_for_update().filter(id=order_item.card_id).first()
+            if not locked_card:
+                raise ResourceNotFound("Card not found")
+            locked_card.quantity += order_item.quantity
+            locked_card.save()
+            order_item.delete()
+        return order
+
+    @staticmethod
+    def add_order_items(order, add_items):
+        for item in add_items or []:
+            order_item = OrderService.create_order_item(
+                order=order,
+                card_id=item.get("card_id"),
+                discount_amount=item.get("discount_amount"),
+                quantity=item.get("quantity"),
+                requires_box=item.get("requires_box"),
+                requires_printing=item.get("requires_printing"),
+            )
+            if item.get("requires_box"):
+                from production.services import BoxOrderService
+
+                BoxOrderService.create_box_order(order_item, item.get("box_type"), item.get("quantity"), item.get("total_box_cost"))
+            if item.get("requires_printing"):
+                from production.services import PrintingJobService
+
+                PrintingJobService.create_printing_job(order_item, item.get("quantity"), item.get("total_printing_cost"))
+        return order
+
+    @staticmethod
+    def update_order_misc(order, order_status, delivery_date, special_instruction):
+        if delivery_date and order.order_date and order.order_date > delivery_date:
+            raise Conflict("Order date cannot be greater than delivery date")
+        order.order_status = order_status or order.order_status
+        order.delivery_date = delivery_date or order.delivery_date
+        order.special_instruction = special_instruction or order.special_instruction
+        order.save()
         return order
 
 
@@ -109,21 +219,20 @@ class BillService:
             raise ResourceNotFound("Bill not found")
 
         return bill
-        # return BillService.calculate_bill_details(bill)
 
     @staticmethod
-    def get_bills_by_order_id(order_id):
-        """Get bills for a given order ID"""
-        return Bill.objects.filter(order_id=order_id).select_related("order", "order__customer", "order__staff").order_by("-created_at")
+    def get_bill_by_order_id(order_id):
+        bill = Bill.objects.select_related("order", "order__customer", "order__staff").filter(order_id=order_id).first()
+        if not bill:
+            raise ResourceNotFound("Bill not found")
+        return bill
 
     @staticmethod
     def get_bills():
-        """Get all bills"""
         return Bill.objects.select_related("order", "order__customer", "order__staff").all().order_by("-created_at")
 
     @staticmethod
-    def get_bill_by_phone(phone):
-        """Get bills by customer phone number"""
+    def get_bills_by_phone(phone):
         return Bill.objects.select_related("order", "order__customer").filter(order__customer__phone=phone).order_by("-created_at")
 
     @staticmethod
@@ -139,10 +248,6 @@ class BillService:
 
     @staticmethod
     def calculate_bill_details(bill, prefetched_data=None):
-        """
-        Calculates the total costs for a single bill.
-        Can use prefetched data for optimization in bulk operations.
-        """
         order = bill.order
 
         if prefetched_data:
@@ -216,9 +321,6 @@ class BillService:
 
     @staticmethod
     def calculate_bills_details_in_bulk(bills):
-        """
-        Efficiently fetches details for a list of bills and calculates their totals.
-        """
         if not bills:
             return []
 
@@ -251,9 +353,6 @@ class BillService:
 
     @staticmethod
     def refresh_bill_payment_status(bill_id):
-        """
-        Recalculates and updates the payment status of a bill based on associated payments.
-        """
         bill = BillService.get_bill_by_id(bill_id)
         bill_details = BillService.calculate_bill_details(bill)
         total_due = bill_details["summary"]["total_with_tax"]

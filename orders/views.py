@@ -7,7 +7,14 @@ from core.authorization import Permission, require_permission
 from core.decorators import forge
 from core.helpers.pagination import PaginationHelper
 from core.utils import model_unwrap
-from orders.serializers import BillQueryParams, OrderCreateSerializer, OrderQueryParams, PaymentCreateSerializer, PaymentQueryParams
+from orders.serializers import (
+    BillQueryParams,
+    OrderCreateSerializer,
+    OrderQueryParams,
+    OrderUpdateSerializer,
+    PaymentCreateSerializer,
+    PaymentQueryParams,
+)
 from orders.services import BillService, OrderService, PaymentService
 from production.services import BoxOrderService, PrintingJobService
 
@@ -34,12 +41,10 @@ class OrderView(APIView):
 
         params = OrderQueryParams.validate_params(request)
 
-        if params.get_value("customer_id"):
-            orders_queryset = OrderService.get_orders_by_customer_id(params.get_value("customer_id"))
-        elif params.get_value("order_date"):
-            orders_queryset = OrderService.get_orders_by_order_date(params.get_value("order_date"))
-        else:
-            orders_queryset = OrderService.get_orders()
+        orders_queryset = OrderService.get_orders(
+            customer_id=params.get_value("customer_id"),
+            order_date=params.get_value("order_date"),
+        )
 
         orders, page_info = PaginationHelper.paginate_queryset(orders_queryset, params.get_value("page"), params.get_value("page_size"))
 
@@ -81,22 +86,16 @@ class OrderView(APIView):
 
             if item.get("requires_box"):
                 box_order = BoxOrderService.create_box_order(
-                    order_item=order_item,
-                    box_type=item.get("box_type"),
-                    quantity=item.get("quantity"),
-                    total_box_cost=item.get("total_box_cost"),
+                    order_item=order_item, box_type=item.get("box_type"), quantity=item.get("quantity"), total_box_cost=item.get("total_box_cost")
                 )
                 order_item_data["box_order"] = model_unwrap(box_order)
-                print("Created Box Order \n", box_order)
 
             if item.get("requires_printing"):
                 printing_job = PrintingJobService.create_printing_job(
-                    order_item=order_item,
-                    quantity=item.get("quantity"),
-                    total_printing_cost=item.get("total_printing_cost"),
+                    order_item=order_item, quantity=item.get("quantity"), total_printing_cost=item.get("total_printing_cost")
                 )
                 order_item_data["printing_job"] = model_unwrap(printing_job)
-                print("Created Printing Job \n", printing_job)
+
             created_order_items.append(order_item_data)
 
         # Create Bill
@@ -105,6 +104,28 @@ class OrderView(APIView):
         order_data = model_unwrap(order)
         order_data["order_items"] = created_order_items
 
+        order_data["bill_id"] = model_unwrap(bill).get("id")
+
+        return order_data
+
+    @forge
+    @require_permission(Permission.ORDER_UPDATE)
+    @transaction.atomic
+    def patch(self, request, order_id):
+        body = OrderUpdateSerializer.validate_request(request)
+
+        order = OrderService.get_order_by_id(order_id)
+
+        OrderService.update_order_items(order, body.get_value("order_items"))
+        OrderService.remove_order_items(order, body.get_value("remove_item_ids"))
+        OrderService.add_order_items(order, body.get_value("add_items"))
+        updated_order = OrderService.update_order_misc(
+            order, body.get_value("order_status"), body.get_value("delivery_date"), body.get_value("special_instruction")
+        )
+
+        order_data = model_unwrap(updated_order)
+
+        bill = BillService.get_bill_by_order_id(order_id)
         order_data["bill_id"] = model_unwrap(bill).get("id")
 
         return order_data
@@ -143,10 +164,12 @@ class BillView(APIView):
         params = BillQueryParams.validate_params(request)
 
         if params.get_value("order_id"):
-            bills_queryset = BillService.get_bills_by_order_id(params.get_value("order_id"))
+            bill = BillService.get_bill_by_order_id(params.get_value("order_id"))
+            bill_details = BillService.calculate_bill_details(bill)
+            return weave(bill_details)
 
         elif params.get_value("phone"):
-            bills_queryset = BillService.get_bill_by_phone(params.get_value("phone"))
+            bills_queryset = BillService.get_bills_by_phone(params.get_value("phone"))
 
         else:
             bills_queryset = BillService.get_bills()

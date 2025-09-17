@@ -42,6 +42,40 @@ class BoxOrderService:
         return BoxOrder.objects.filter(order_item_id__in=order_item_ids)
 
     @staticmethod
+    def get_latest_by_order_item_id(order_item_id):
+        return BoxOrder.objects.filter(order_item_id=order_item_id).order_by("-created_at").first()
+
+    @staticmethod
+    def delete_by_order_item(order_item):
+        BoxOrder.objects.filter(order_item=order_item).delete()
+
+    @staticmethod
+    def update_box_order(
+        box_order, box_type=None, box_quantity=None, total_box_cost=None, box_status=None, box_maker_id=None, estimated_completion=None
+    ):
+        if box_type is not None:
+            BoxOrderService.validate_box_type(box_order, box_type)
+            box_order.box_type = box_type
+        if box_quantity is not None:
+            BoxOrderService.validate_box_quantity(box_order, box_quantity)
+            box_order.box_quantity = box_quantity
+        if total_box_cost is not None:
+            box_order.total_box_cost = total_box_cost
+        if estimated_completion is not None:
+            BoxOrderService.validate_estimated_completion(box_order, estimated_completion)
+            box_order.estimated_completion = estimated_completion
+        if box_status is not None:
+            BoxOrderService.validate_box_status_transition(box_order, box_status)
+            box_order.box_status = box_status
+        if box_maker_id is not None:
+            from production.services import BoxMakerService
+
+            box_order.box_maker = BoxMakerService.validate_box_maker_exists(box_maker_id)
+        BoxOrderService.update_box_order_status(box_order, box_maker_id=box_maker_id)
+        box_order.save()
+        return box_order
+
+    @staticmethod
     def validate_box_quantity(box_order, new_quantity):
         """Validate that total box quantity doesn't exceed order item quantity"""
         if new_quantity is None:
@@ -149,6 +183,47 @@ class PrintingJobService:
     def get_printing_jobs_bulk(order_item_ids):
         """Get printing jobs for multiple order items in one query"""
         return PrintingJob.objects.filter(order_item_id__in=order_item_ids)
+
+    @staticmethod
+    def get_latest_by_order_item_id(order_item_id):
+        return PrintingJob.objects.filter(order_item_id=order_item_id).order_by("-created_at").first()
+
+    @staticmethod
+    def delete_by_order_item(order_item):
+        PrintingJob.objects.filter(order_item=order_item).delete()
+
+    @staticmethod
+    def update_printing_job(
+        printing_job,
+        total_printing_cost=None,
+        print_quantity=None,
+        printing_status=None,
+        printer_id=None,
+        tracing_studio_id=None,
+        estimated_completion=None,
+    ):
+        if print_quantity is not None:
+            PrintingJobService.validate_print_quantity(printing_job, print_quantity)
+            printing_job.print_quantity = print_quantity
+        if total_printing_cost is not None:
+            printing_job.total_printing_cost = total_printing_cost
+        if estimated_completion is not None:
+            PrintingJobService.validate_estimated_completion(printing_job, estimated_completion)
+            printing_job.estimated_completion = estimated_completion
+        if printing_status is not None:
+            PrintingJobService.validate_printing_status_transition(printing_job, printing_status)
+            printing_job.printing_status = printing_status
+        if printer_id is not None:
+            from production.services import PrinterService
+
+            printing_job.printer = PrinterService.validate_printer_exists(printer_id)
+        if tracing_studio_id is not None:
+            from production.services import TracingStudioService
+
+            printing_job.tracing_studio = TracingStudioService.validate_tracing_studio_exists(tracing_studio_id)
+        PrintingJobService.update_printing_job_status(printing_job, printer_id=printer_id, tracing_studio_id=tracing_studio_id)
+        printing_job.save()
+        return printing_job
 
     @staticmethod
     def get_printing_job_by_id(printing_job_id):

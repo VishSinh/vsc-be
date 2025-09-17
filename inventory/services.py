@@ -125,6 +125,18 @@ class InventoryTransactionService:
             notes="Sale",
         )
 
+    @staticmethod
+    def record_return_transaction(order_item):
+        InventoryTransaction.objects.create(
+            card=order_item.card,
+            staff=order_item.order.staff,
+            transaction_type=InventoryTransaction.TransactionType.RETURN,
+            order_item=order_item,
+            quantity_changed=order_item.quantity,
+            cost_price=order_item.card.cost_price,
+            notes="Return to stock",
+        )
+
 
 class VendorService:
     @staticmethod

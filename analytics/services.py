@@ -185,7 +185,7 @@ class AnalyticsService:
 
     @staticmethod
     def get_out_of_stock_cards_list():
-        return Card.objects.filter(quantity=0, is_active=True).select_related("vendor")
+        return Card.objects.filter(quantity_lte=settings.OUT_OF_STOCK_THRESHOLD, is_active=True).select_related("vendor")
 
     @staticmethod
     def get_pending_orders_list():
