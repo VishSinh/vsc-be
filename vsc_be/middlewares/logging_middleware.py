@@ -1,9 +1,13 @@
 import json
-from typing import Any
+import time
+import uuid
+from typing import Any, Dict, Optional, Union
 
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
+
+from auditing.models import APIAuditLog
 
 
 class LoggingMiddleware:
@@ -11,14 +15,26 @@ class LoggingMiddleware:
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
-        if getattr(settings, "ENABLE_API_LOGGING", False):
+        enable_console = getattr(settings, "ENABLE_API_LOGGING", False)
+        enable_db = getattr(settings, "ENABLE_API_DB_AUDIT", None)
+        if enable_db is None:
+            enable_db = enable_console
+        request_id = uuid.uuid4()
+        start = time.monotonic()
+        if enable_console:
             self._log_request(request)
 
         # Get response
         response = self.get_response(request)
 
-        if getattr(settings, "ENABLE_API_LOGGING", False):
+        if enable_console:
             self._log_response(request, response)
+        if enable_db and not self._should_skip_audit(request):
+            try:
+                duration_ms = int((time.monotonic() - start) * 1000)
+                self._persist_api_audit(request, response, request_id, duration_ms)
+            except Exception:
+                pass
 
         return response
 
@@ -101,3 +117,99 @@ class LoggingMiddleware:
         }
 
         print(f"📤 OUTGOING RESPONSE:\n{json.dumps(log_data, indent=2)}")
+
+    def _persist_api_audit(self, request: HttpRequest, response: HttpResponse, request_id: uuid.UUID, duration_ms: int) -> None:
+        redacted_keys = set(getattr(settings, "AUDIT_REDACTED_FIELDS", ["password", "token", "authorization", "cookie", "secret", "api_key"]))
+        max_body_chars = int(getattr(settings, "AUDIT_MAX_BODY_CHARS", 4096))
+        staff = getattr(request, "staff", None)
+
+        def _client_ip(req: HttpRequest) -> Optional[str]:
+            xff = req.META.get("HTTP_X_FORWARDED_FOR")
+            if xff:
+                parts = [p.strip() for p in xff.split(",") if p.strip()]
+                if parts:
+                    return str(parts[0])
+            ra = req.META.get("REMOTE_ADDR")
+            return str(ra) if isinstance(ra, str) else None
+
+        def _redact(obj: Union[Dict[str, Any], list, str, int, float, None]) -> Union[Dict[str, Any], list, str, int, float, None]:
+            if isinstance(obj, dict):
+                return {k: ("***REDACTED***" if k.lower() in redacted_keys else _redact(v)) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [_redact(v) for v in obj]
+            return obj
+
+        def _parse_body(raw: Optional[str]) -> Union[Dict[str, Any], list, str, None]:
+            if not raw:
+                return {}
+            try:
+                parsed = _redact(json.loads(raw))
+                if isinstance(parsed, (dict, list, str)):
+                    return parsed
+                return str(parsed) if parsed is not None else {}
+            except Exception:
+                s = raw if raw is not None and len(raw) <= max_body_chars else (raw[:max_body_chars] if raw is not None else "")
+                return s
+
+        def _request_body(req: HttpRequest) -> Union[Dict[str, Any], list, str, None]:
+            if req.method in ["POST", "PUT", "PATCH"]:
+                try:
+                    return _parse_body(req.body.decode("utf-8"))
+                except Exception:
+                    return "<binary or unreadable>"
+            return {}
+
+        def _response_body(resp: HttpResponse) -> Union[Dict[str, Any], list, str, None]:
+            if hasattr(resp, "content"):
+                try:
+                    return _parse_body(resp.content.decode("utf-8"))
+                except Exception:
+                    return "<binary or unreadable>"
+            return {}
+
+        def _sanitize_headers(h: Dict[str, Any]) -> Dict[str, Any]:
+            result = {}
+            for k, v in h.items():
+                if k.lower() in {"authorization", "cookie", "x-csrftoken"}:
+                    result[k] = "***REDACTED***"
+                else:
+                    result[k] = v
+            return result
+
+        try:
+            content_len = None
+            if hasattr(response, "content"):
+                try:
+                    content_len = len(response.content)
+                except Exception:
+                    content_len = None
+            if content_len is None:
+                try:
+                    content_len = int(response.headers.get("Content-Length", "")) if hasattr(response, "headers") else None
+                except Exception:
+                    content_len = None
+            APIAuditLog.objects.create(
+                id=uuid.uuid4(),
+                staff=staff if staff else None,
+                endpoint=request.path,
+                request_method=request.method,
+                request_body=_request_body(request),
+                response_body=_response_body(response),
+                status_code=getattr(response, "status_code", None),
+                duration_ms=duration_ms,
+                ip_address=_client_ip(request),
+                user_agent=request.headers.get("User-Agent", ""),
+                query_params=dict(request.GET or {}),
+                headers=_sanitize_headers(dict(request.headers)),
+                request_id=request_id,
+                response_size_bytes=content_len,
+            )
+        except Exception:
+            pass
+
+    def _should_skip_audit(self, request: HttpRequest) -> bool:
+        excluded = getattr(settings, "AUDIT_EXCLUDED_PATHS", [])
+        try:
+            return any(p and p in request.path for p in excluded)
+        except Exception:
+            return False

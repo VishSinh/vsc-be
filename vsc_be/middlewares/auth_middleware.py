@@ -4,6 +4,7 @@ from django.conf import settings
 from rest_framework import status
 
 from accounts.services import StaffService
+from auditing.context import reset_current_staff, set_current_staff
 from core.exceptions import Unauthorized
 from core.helpers.api_response import APIResponse
 from core.helpers.security import Security
@@ -35,8 +36,12 @@ class AuthMiddleware:
 
             request.staff = staff
             request.is_authenticated = True
+            set_current_staff(staff)
 
-            return self.get_response(request)
+            try:
+                return self.get_response(request)
+            finally:
+                reset_current_staff()
         except Unauthorized as e:
             print(e)
             return APIResponse(success=False, status_code=status.HTTP_401_UNAUTHORIZED, error=e).response()

@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 from decouple import config
 
@@ -171,4 +171,17 @@ CORS_ALLOWED_ORIGIN_REGEXES = config("CORS_ALLOWED_ORIGIN_REGEXES", default="").
 
 
 # API logging toggle
-ENABLE_API_LOGGING = config("ENABLE_API_LOGGING", default=False, cast=bool)
+ENABLE_API_LOGGING = config("ENABLE_API_LOGGING", default=True, cast=bool)
+
+# API audit logging toggles
+ENABLE_API_DB_AUDIT = config("ENABLE_API_DB_AUDIT", default=True, cast=bool)
+AUDIT_EXCLUDED_PATHS: List[str] = [p for p in config("AUDIT_EXCLUDED_PATHS", default="").split(",") if p]
+AUDIT_REDACTED_FIELDS: List[str] = [
+    k for k in config("AUDIT_REDACTED_FIELDS", default="password,token,authorization,cookie,secret,api_key").split(",") if k
+]
+AUDIT_MAX_BODY_CHARS = config("AUDIT_MAX_BODY_CHARS", default=4096, cast=int)
+
+AUDIT_INCLUDE_APPS: List[str] = ["accounts", "inventory", "orders", "production"]
+AUDIT_EXCLUDE_APPS: List[str] = []
+AUDIT_EXCLUDE_MODELS: List[str] = ["auditing.ModelAuditLog", "auditing.APIAuditLog"]
+AUDIT_FIELD_IGNORE: Dict[str, List[str]] = {"*": ["created_at", "updated_at", "last_login"]}
