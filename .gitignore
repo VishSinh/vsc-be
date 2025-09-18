@@ -62,6 +62,7 @@ drf_example
 .env
 .env.local
 .env.*.local
+.backup.env
 
 # Schema and documentation files
 *.er
@@ -80,3 +81,5 @@ staticfiles/
 
 ./schema.dot
 ./schema.png
+
+backups/
