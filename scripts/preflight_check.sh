@@ -18,7 +18,7 @@ with_lock "preflight" bash -c '
 
   # Check docker on remote
   log "Checking docker on remote"
-  ssh_exec "docker version --format '{{.Server.Version}}'" >/dev/null 2>&1 || die "Docker not available on remote"
+  remote_docker "version --format {{.Server.Version}}" >/dev/null 2>&1 || die "Docker not available on remote"
 
   # Compose detection
   cmd=$(remote_compose_cmd) || die "Failed to detect compose on remote"
@@ -37,7 +37,7 @@ with_lock "preflight" bash -c '
     ssh_exec "test -d ${MEDIA_BIND_HOST_PATH}" || die "MEDIA_BIND_HOST_PATH does not exist on VPS: ${MEDIA_BIND_HOST_PATH}"
   else
     log "Media mode: volume-tar (docker volume ${MEDIA_VOLUME_NAME})"
-    ssh_exec "docker volume inspect ${MEDIA_VOLUME_NAME} >/dev/null" || warn "Media volume ${MEDIA_VOLUME_NAME} not found yet; will be created by compose on first run"
+    remote_docker "volume inspect ${MEDIA_VOLUME_NAME} >/dev/null" || warn "Media volume ${MEDIA_VOLUME_NAME} not found yet; will be created by compose on first run"
   fi
 
   # Backups dir

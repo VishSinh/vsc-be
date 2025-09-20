@@ -33,6 +33,7 @@ class OrderView(APIView):
                     item_data["printing_jobs"] = model_unwrap(order_item.printing_jobs.all())
                 order_items_data.append(item_data)
             order_data["order_items"] = order_items_data
+            order_data["bill_id"] = model_unwrap(order.bill).get("id")
             return order_data
 
         if order_id:

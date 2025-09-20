@@ -22,7 +22,6 @@ with_lock "audit" bash -c '
       rel="${f#${latest_dir}/media/}"
       local_hash=$(sha256_file "${f}")
       remote_path="${MEDIA_BIND_HOST_PATH%/}/${rel}"
-      remote_hash
       remote_hash=$(ssh_exec "sha256sum \"${remote_path}\" | awk '{print $1}'" 2>/dev/null || true)
       if [[ -z "${remote_hash}" ]]; then
         warn "Missing on VPS: ${remote_path}"
@@ -39,8 +38,8 @@ with_lock "audit" bash -c '
     [[ -f "${tarfile}" ]] || die "media.tar.gz not found in latest snapshot"
     # Get sample of files from remote volume
     sample
-    if ssh_exec "docker volume inspect ${MEDIA_VOLUME_NAME} >/dev/null 2>&1"; then
-      sample=$(ssh_exec "docker run --rm -v ${MEDIA_VOLUME_NAME}:/data alpine sh -lc 'cd /data && find . -type f | sed s#^./## | shuf -n ${n}'")
+    if remote_docker "volume inspect ${MEDIA_VOLUME_NAME} >/dev/null 2>&1"; then
+      sample=$(ssh_exec "$(remote_docker_cmd) run --rm -v ${MEDIA_VOLUME_NAME}:/data alpine sh -lc 'cd /data && find . -type f | sed s#^./## | shuf -n ${n}'")
     else
       sample=$(ssh_exec "$(remote_compose_cmd) exec -T web sh -lc 'cd ${MEDIA_MOUNT_PATH_IN_WEB} && find . -type f | sed s#^./## | shuf -n ${n}'")
     fi
@@ -48,8 +47,8 @@ with_lock "audit" bash -c '
       [[ -z "${rel}" ]] && continue
       local remote_hash
       # Remote hash
-      if ssh_exec "docker volume inspect ${MEDIA_VOLUME_NAME} >/dev/null 2>&1"; then
-        remote_hash=$(ssh_exec "docker run --rm -v ${MEDIA_VOLUME_NAME}:/data alpine sh -lc 'cd /data && sha256sum \"${rel}\" | awk \"{print \\\$1}\"'" 2>/dev/null || true)
+      if remote_docker "volume inspect ${MEDIA_VOLUME_NAME} >/dev/null 2>&1"; then
+        remote_hash=$(ssh_exec "$(remote_docker_cmd) run --rm -v ${MEDIA_VOLUME_NAME}:/data alpine sh -lc 'cd /data && sha256sum \"${rel}\" | awk \"{print \\\$1}\"'" 2>/dev/null || true)
       else
         remote_hash=$(ssh_exec "$(remote_compose_cmd) exec -T web sh -lc 'cd ${MEDIA_MOUNT_PATH_IN_WEB} && sha256sum \"${rel}\" | awk \"{print \\\$1}\"'" 2>/dev/null || true)
       fi

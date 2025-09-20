@@ -15,7 +15,6 @@ CONFIRM="${2:-}"
 with_lock "restore-media" bash -c '
   check_host_deps
   mode=$(resolve_media_mode)
-  snap_dir
   if [[ "${SNAP_ID}" == "latest" ]]; then snap_dir="${BACKUP_ROOT}/latest"; else snap_dir="${BACKUP_ROOT}/${SNAP_ID}"; fi
   if [[ "${mode}" == "rsync" ]]; then
     [[ -d "${snap_dir}/media" ]] || die "media/ directory not found in snapshot"
@@ -28,9 +27,9 @@ with_lock "restore-media" bash -c '
     [[ -f "${tarfile}" ]] || die "media.tar.gz not found in snapshot"
     log "Streaming media.tar.gz into docker volume ${MEDIA_VOLUME_NAME} on VPS"
     if [[ "${DRY_RUN:-0}" = "1" ]]; then
-      echo "[DRY_RUN] cat ${tarfile} | ssh ${SSH_USER}@${SSH_HOST} docker run --rm -i -v ${MEDIA_VOLUME_NAME}:/data alpine tar -xz -C /data"
+      echo "[DRY_RUN] cat ${tarfile} | ssh ${SSH_USER}@${SSH_HOST} $(remote_docker_cmd) run --rm -i -v ${MEDIA_VOLUME_NAME}:/data alpine tar -xz -C /data"
     else
-      cat "${tarfile}" | ssh ${SSH_OPTS:-} "${SSH_USER}@${SSH_HOST}" "docker run --rm -i -v ${MEDIA_VOLUME_NAME}:/data alpine tar -xz -C /data"
+      cat "${tarfile}" | ssh ${SSH_OPTS:-} "${SSH_USER}@${SSH_HOST}" "$(remote_docker_cmd) run --rm -i -v ${MEDIA_VOLUME_NAME}:/data alpine tar -xz -C /data"
     fi
   fi
   log "Media restore completed for ${SNAP_ID}"

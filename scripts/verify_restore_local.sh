@@ -21,7 +21,6 @@ with_lock "verify" bash -c '
   cname="verify_pg_$(date +%s)"
   dbname="${PG_DB}"
   dbuser="${PG_USER}"
-  port
   port=$(python3 - <<PY
 import socket,random
 def free_port():

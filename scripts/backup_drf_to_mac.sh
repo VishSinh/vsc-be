@@ -30,7 +30,7 @@ main() {
     ssh_exec "${compose} exec -T ${PG_SERVICE} pg_dump -U ${PG_USER_RESOLVED} -d ${PG_DB_RESOLVED} --schema-only" > "${snap_dir}/schema.sql"
 
     # 3) Roles (best effort)
-    if ssh_exec "${compose} exec -T ${PG_SERVICE} sh -lc 'command -v pg_dumpall >/dev/null'" >/dev/null 2>&1; then
+    if ssh_exec "${compose} exec -T ${PG_SERVICE} sh -lc \"command -v pg_dumpall >/dev/null\"" >/dev/null 2>&1; then
       log "Dumping roles (best effort)"
       if ssh_exec "${compose} exec -T ${PG_SERVICE} pg_dumpall --roles-only -U ${PG_USER_RESOLVED}" > "${snap_dir}/roles.sql"; then
         :
@@ -46,22 +46,22 @@ main() {
     if [[ "${mode}" == "rsync" ]]; then
       log "Media mode: rsync incremental from ${MEDIA_BIND_HOST_PATH}"
       mkdir -p "${snap_dir}/media"
-      local linkdest=""
+      linkdest=""
       if [[ -d "${BACKUP_ROOT}/latest/media" ]]; then linkdest="--link-dest=${BACKUP_ROOT}/latest/media"; fi
-      local rsync_opts=("-aH" "--delete" "--numeric-ids" "--partial" "--info=stats2,progress2")
-      local src="${SSH_USER}@${SSH_HOST}:${MEDIA_BIND_HOST_PATH%/}/"
+      rsync_opts=("-aH" "--delete" "--numeric-ids" "--partial" "--info=stats2,progress2")
+      src="${SSH_USER}@${SSH_HOST}:${MEDIA_BIND_HOST_PATH%/}/"
       if [[ "${DRY_RUN:-0}" = "1" ]]; then rsync_opts+=("--dry-run"); fi
       run_rsync ${SSH_OPTS:-} "${rsync_opts[@]}" ${linkdest:+"${linkdest}"} "${src}" "${snap_dir}/media/"
     else
       log "Media mode: volume-tar from docker volume ${MEDIA_VOLUME_NAME} -> media.tar.gz"
-      local out_file="${snap_dir}/media.tar.gz"
+      out_file="${snap_dir}/media.tar.gz"
       # Prefer docker run -v volume
-      if ssh_exec "docker volume inspect ${MEDIA_VOLUME_NAME} >/dev/null 2>&1"; then
+      if remote_docker "volume inspect ${MEDIA_VOLUME_NAME} >/dev/null 2>&1"; then
         # Stream tar.gz from remote to local file
         if [[ "${DRY_RUN:-0}" = "1" ]]; then
-          echo "[DRY_RUN] ssh ${SSH_USER}@${SSH_HOST} docker run --rm -v ${MEDIA_VOLUME_NAME}:/data alpine sh -c 'cd /data && tar -cz . > /dev/stdout' > ${out_file}"
+          echo "[DRY_RUN] ssh ${SSH_USER}@${SSH_HOST} $(remote_docker_cmd) run --rm -v ${MEDIA_VOLUME_NAME}:/data alpine sh -c \"cd /data && tar -cz .\" > ${out_file}"
         else
-          ssh_exec "docker run --rm -v ${MEDIA_VOLUME_NAME}:/data alpine sh -c 'cd /data && tar -cz .'" > "${out_file}"
+          ssh_exec "$(remote_docker_cmd) run --rm -v ${MEDIA_VOLUME_NAME}:/data alpine sh -c \"cd /data && tar -cz .\"" > "${out_file}"
         fi
       else
         # Fallback: tar from inside web container mount
@@ -75,7 +75,7 @@ main() {
     fi
 
     # 5) Manifest
-    local manifest="${snap_dir}/manifest.json"
+    manifest="${snap_dir}/manifest.json"
     write_manifest "${manifest}" \
       TS="${ts}" \
       SSH_HOST="${SSH_HOST}" \
