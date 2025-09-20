@@ -181,11 +181,11 @@ class AnalyticsService:
 
     @staticmethod
     def get_low_stock_cards_list():
-        return Card.objects.filter(quantity__gt=0, quantity__lte=settings.LOW_STOCK_THRESHOLD, is_active=True).select_related("vendor")
+        return Card.objects.filter(quantity__gt=settings.OUT_OF_STOCK_THRESHOLD, quantity__lte=settings.LOW_STOCK_THRESHOLD, is_active=True).select_related("vendor")
 
     @staticmethod
     def get_out_of_stock_cards_list():
-        return Card.objects.filter(quantity_lte=settings.OUT_OF_STOCK_THRESHOLD, is_active=True).select_related("vendor")
+        return Card.objects.filter(quantity__lte=settings.OUT_OF_STOCK_THRESHOLD, is_active=True).select_related("vendor")
 
     @staticmethod
     def get_pending_orders_list():
