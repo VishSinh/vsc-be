@@ -369,7 +369,7 @@ resolve_pg_user() {
 }
 
 # End of common library
- 
+
 # Export functions so they are available inside `bash -c` subshells
 export -f ts_utc _log_file_for log warn die with_lock run_cmd run_rsync run_rm_rf \
   sha256_file require_host_tool check_host_deps ssh_base ssh_exec ssh_copy_to_remote \

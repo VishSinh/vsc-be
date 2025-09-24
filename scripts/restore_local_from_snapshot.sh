@@ -109,5 +109,3 @@ with_lock "restore-local" bash -c '
   # Show a small summary
   log "Local restore complete: db=$(file_size \"${snap_dir}/db.dump\"), media_tar=$(file_size \"${snap_dir}/media.tar.gz\")"
 '
-
-

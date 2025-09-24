@@ -150,6 +150,13 @@ class OrderView(APIView):
 
         return order_data
 
+    @forge
+    @require_permission(Permission.ORDER_DELETE)
+    @transaction.atomic
+    def delete(self, request, order_id):
+        OrderService.delete_order(order_id)
+        return {"message": "Order deleted successfully"}
+
 
 class BillView(APIView):
     @forge

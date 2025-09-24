@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from core.decorators import forge
 from core.helpers.pagination import PaginationHelper
 from core.utils import model_unwrap
+from orders.services import OrderStatusService
 from production.serializers import (
     BoxMakerCreateSerializer,
     BoxMakerQueryParams,
@@ -14,7 +15,6 @@ from production.serializers import (
     TracingStudioQueryParams,
 )
 from production.services import BoxMakerService, BoxOrderService, PrinterService, PrintingJobService, TracingStudioService
-from orders.services import OrderStatusService
 
 
 class BoxOrderView(APIView):

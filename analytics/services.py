@@ -132,7 +132,7 @@ class AnalyticsService:
                 if s_item.total_expense is None:
                     is_ready_for_calculation = False
                     break
-                current_order_profit += (s_item.total_cost - s_item.total_expense)
+                current_order_profit += s_item.total_cost - s_item.total_expense
 
             if is_ready_for_calculation:
                 total_profit += current_order_profit
@@ -208,7 +208,8 @@ class AnalyticsService:
     def get_pending_orders_list():
         return (
             Order.objects.exclude(order_status__in=[Order.OrderStatus.DELIVERED, Order.OrderStatus.FULLY_PAID])
-            .select_related("customer", "staff").order_by("-order_date")
+            .select_related("customer", "staff")
+            .order_by("-order_date")
         )
 
     @staticmethod

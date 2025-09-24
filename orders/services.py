@@ -7,7 +7,7 @@ from core.exceptions import Conflict, ResourceNotFound
 from core.utils import model_unwrap
 from inventory.models import Card
 from inventory.services import InventoryTransactionService
-from orders.models import Bill, Order, OrderItem, Payment, ServiceOrderItem
+from orders.models import Bill, BillAdjustment, Order, OrderItem, Payment, ServiceOrderItem
 from production.models import BoxOrder, PrintingJob
 
 
@@ -219,6 +219,40 @@ class OrderService:
             OrderStatusService.recalculate_ready(order)
         return order
 
+    @staticmethod
+    def delete_order(order_id: str) -> None:
+        """Delete an order and all of its dependent records safely.
+
+        Steps:
+        - Prevent deletion if there are any payments or bill adjustments.
+        - Revert inventory quantities for each order item and record return transactions.
+        - Rely on database cascades to remove dependent rows (order items, service items, bill, payments, production jobs).
+        """
+        order = OrderService.get_order_by_id(order_id)
+
+        # Guard: do not allow deleting orders with any payments or adjustments recorded
+        bill = Bill.objects.filter(order=order).first()
+        if bill:
+            if Payment.objects.filter(bill=bill).exists():
+                raise Conflict("Cannot delete order with payments. Refund or delete payments first.")
+            if BillAdjustment.objects.filter(bill=bill).exists():
+                raise Conflict("Cannot delete order with bill adjustments. Remove adjustments first.")
+
+        # Revert inventory for all order items
+        order_items = OrderItem.objects.filter(order=order).select_related("card")
+        for order_item in order_items:
+            # Record the return transaction then add quantity back
+            InventoryTransactionService.record_return_transaction(order_item)
+
+            locked_card = Card.objects.select_for_update().filter(id=order_item.card_id).first()
+            if not locked_card:
+                raise ResourceNotFound("Card not found")
+            locked_card.quantity += order_item.quantity
+            locked_card.save()
+
+        # Finally delete the order (cascades will handle children)
+        order.delete()
+
 
 class OrderStatusService:
     @staticmethod
@@ -235,24 +269,28 @@ class OrderStatusService:
         has_progress = False
         for item in order.order_items.all():
             # Printing started if printer or tracing studio assigned, or status moved from PENDING
-            for pj in getattr(item, "printing_jobs", []).all():
-                if pj.printer_id or pj.tracing_studio_id:
-                    has_progress = True
-                    break
-                if pj.printing_status != pj.PrintingStatus.PENDING:
-                    has_progress = True
-                    break
+            printing_jobs = getattr(item, "printing_jobs", None)
+            if printing_jobs:
+                for pj in printing_jobs.all():
+                    if pj.printer_id or pj.tracing_studio_id:
+                        has_progress = True
+                        break
+                    if pj.printing_status != pj.PrintingStatus.PENDING:
+                        has_progress = True
+                        break
             if has_progress:
                 break
 
             # Box started if box maker assigned, or status moved from PENDING
-            for bo in getattr(item, "box_orders", []).all():
-                if bo.box_maker_id:
-                    has_progress = True
-                    break
-                if bo.box_status != bo.BoxStatus.PENDING:
-                    has_progress = True
-                    break
+            box_orders = getattr(item, "box_orders", None)
+            if box_orders:
+                for bo in box_orders.all():
+                    if bo.box_maker_id:
+                        has_progress = True
+                        break
+                    if bo.box_status != bo.BoxStatus.PENDING:
+                        has_progress = True
+                        break
             if has_progress:
                 break
 
@@ -548,7 +586,9 @@ class PaymentService:
 
 class ServiceOrderItemService:
     @staticmethod
-    def create_service_item(order: Order, *, service_type: str, quantity: int, total_cost: Decimal, total_expense: Decimal | None = None, description: str = ""):
+    def create_service_item(
+        order: Order, *, service_type: str, quantity: int, total_cost: Decimal, total_expense: Decimal | None = None, description: str = ""
+    ):
         if quantity is None or quantity <= 0:
             raise Conflict("Quantity must be greater than zero")
 
@@ -594,11 +634,22 @@ class ServiceOrderItemService:
     @staticmethod
     def add_service_items(order: Order, add_items: list[dict] | None):
         for payload in add_items or []:
+            service_type = payload.get("service_type")
+            quantity = payload.get("quantity")
+            total_cost = payload.get("total_cost")
+
+            if not service_type or not isinstance(service_type, str):
+                raise Conflict("Service type is required and must be a string")
+            if quantity is None or not isinstance(quantity, int):
+                raise Conflict("Quantity is required and must be an integer")
+            if total_cost is None or not isinstance(total_cost, Decimal):
+                raise Conflict("Total cost is required and must be a decimal")
+
             ServiceOrderItemService.create_service_item(
                 order,
-                service_type=payload.get("service_type"),
-                quantity=payload.get("quantity"),
-                total_cost=payload.get("total_cost"),
+                service_type=service_type,
+                quantity=quantity,
+                total_cost=total_cost,
                 total_expense=payload.get("total_expense"),
                 description=payload.get("description", ""),
             )
