@@ -24,7 +24,7 @@ class CardService:
 
     @staticmethod
     def get_cards():
-        return Card.objects.filter(is_active=True).order_by("created_at")
+        return Card.objects.filter(is_active=True).order_by("-created_at")
 
     @staticmethod
     @transaction.atomic
