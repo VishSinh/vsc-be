@@ -7,7 +7,7 @@ from core.exceptions import Conflict, ResourceNotFound
 from core.utils import model_unwrap
 from inventory.models import Card
 from inventory.services import InventoryTransactionService
-from orders.models import Bill, Order, OrderItem, Payment
+from orders.models import Bill, Order, OrderItem, Payment, ServiceOrderItem
 from production.models import BoxOrder, PrintingJob
 
 
@@ -21,7 +21,8 @@ class OrderService:
                     "box_orders",
                     "printing_jobs",
                 ),
-            )
+            ),
+            "service_items",
         )
 
     @staticmethod
@@ -160,6 +161,9 @@ class OrderService:
             _handle_box_requirements(order_item, item.get("requires_box"), item.get("box_type"), item.get("total_box_cost"))
             _handle_printing_requirements(order_item, item.get("requires_printing"), item.get("total_printing_cost"))
             order_item.save()
+        # Recalculate order status after item updates
+        OrderStatusService.mark_in_progress_if_started(order)
+        OrderStatusService.recalculate_ready(order)
         return order
 
     @staticmethod
@@ -173,6 +177,8 @@ class OrderService:
             locked_card.quantity += order_item.quantity
             locked_card.save()
             order_item.delete()
+        # Removing items may affect READY status
+        OrderStatusService.recalculate_ready(order)
         return order
 
     @staticmethod
@@ -194,6 +200,9 @@ class OrderService:
                 from production.services import PrintingJobService
 
                 PrintingJobService.create_printing_job(order_item, item.get("quantity"), item.get("total_printing_cost"))
+        # Adding items might kick off work → IN_PROGRESS
+        OrderStatusService.mark_in_progress_if_started(order)
+        OrderStatusService.recalculate_ready(order)
         return order
 
     @staticmethod
@@ -204,7 +213,99 @@ class OrderService:
         order.delivery_date = delivery_date or order.delivery_date
         order.special_instruction = special_instruction or order.special_instruction
         order.save()
+        # If status not explicitly provided, try to keep it consistent
+        if not order_status:
+            OrderStatusService.mark_in_progress_if_started(order)
+            OrderStatusService.recalculate_ready(order)
         return order
+
+
+class OrderStatusService:
+    @staticmethod
+    def mark_in_progress_if_started(order: Order) -> bool:
+        """
+        If any work has effectively started (provider assigned or any subtask in progress),
+        bump order status from CONFIRMED to IN_PROGRESS.
+        Returns True if status changed.
+        """
+        if order.order_status != Order.OrderStatus.CONFIRMED:
+            return False
+
+        # Check printing jobs and box orders for any assignment/progress
+        has_progress = False
+        for item in order.order_items.all():
+            # Printing started if printer or tracing studio assigned, or status moved from PENDING
+            for pj in getattr(item, "printing_jobs", []).all():
+                if pj.printer_id or pj.tracing_studio_id:
+                    has_progress = True
+                    break
+                if pj.printing_status != pj.PrintingStatus.PENDING:
+                    has_progress = True
+                    break
+            if has_progress:
+                break
+
+            # Box started if box maker assigned, or status moved from PENDING
+            for bo in getattr(item, "box_orders", []).all():
+                if bo.box_maker_id:
+                    has_progress = True
+                    break
+                if bo.box_status != bo.BoxStatus.PENDING:
+                    has_progress = True
+                    break
+            if has_progress:
+                break
+
+        if has_progress:
+            order.order_status = Order.OrderStatus.IN_PROGRESS
+            order.save(update_fields=["order_status", "updated_at"])
+            return True
+        return False
+
+    @staticmethod
+    def recalculate_ready(order: Order) -> bool:
+        """
+        Set order to READY if all required production/service tasks are completed.
+        Returns True if status changed.
+        """
+        # Only attempt READY if not already DELIVERED or FULLY_PAID (terminal states)
+        if order.order_status in (Order.OrderStatus.DELIVERED, Order.OrderStatus.FULLY_PAID):
+            return False
+
+        # Must be at least IN_PROGRESS to reach READY
+        current_status = order.order_status
+
+        def item_ready(oi: OrderItem) -> bool:
+            if oi.requires_printing:
+                printing_jobs = oi.printing_jobs.all()
+                if not printing_jobs:
+                    return False
+                if any(pj.printing_status != pj.PrintingStatus.COMPLETED for pj in printing_jobs):
+                    return False
+            if oi.requires_box:
+                box_orders = oi.box_orders.all()
+                if not box_orders:
+                    return False
+                if any(bo.box_status != bo.BoxStatus.COMPLETED for bo in box_orders):
+                    return False
+            return True
+
+        # All order items that require work should be ready
+        for oi in order.order_items.all():
+            if oi.requires_printing or oi.requires_box:
+                if not item_ready(oi):
+                    return False
+
+        # Optional: third-party service items readiness (treat DELIVERED as ready)
+        for si in order.service_items.all():
+            if si.procurement_status != ServiceOrderItem.ProcurementStatus.DELIVERED:
+                return False
+
+        if current_status != Order.OrderStatus.READY:
+            order.order_status = Order.OrderStatus.READY
+            order.save(update_fields=["order_status", "updated_at"])
+            return True
+        return False
 
 
 class BillService:
@@ -254,12 +355,14 @@ class BillService:
             current_order_items = prefetched_data["order_items_map"].get(order.id, [])
             box_orders_map = prefetched_data["box_orders_map"]
             printing_jobs_map = prefetched_data["printing_jobs_map"]
+            service_items = prefetched_data.get("service_items_map", {}).get(order.id, [])
         else:
             # This path is taken when calculating for a single bill without pre-fetching.
             current_order_items = order.order_items.all().select_related("card")
             item_ids = [item.id for item in current_order_items]
             box_orders = BoxOrder.objects.filter(order_item_id__in=item_ids)
             printing_jobs = PrintingJob.objects.filter(order_item_id__in=item_ids)
+            service_items = ServiceOrderItem.objects.filter(order=order)
 
             box_orders_map = {item.id: [] for item in current_order_items}
             for bo in box_orders:
@@ -270,6 +373,7 @@ class BillService:
                 printing_jobs_map.setdefault(pj.order_item_id, []).append(pj)
 
         items_total = Decimal("0.00")
+        service_items_total = Decimal("0.00")
         total_box_cost = Decimal("0.00")
         total_printing_cost = Decimal("0.00")
         detailed_order_items = []
@@ -301,7 +405,25 @@ class BillService:
                 }
             )
 
-        grand_total = items_total + total_box_cost + total_printing_cost
+        # Include service items as additional detailed items
+        for s_item in service_items:
+            base_cost = s_item.total_cost or Decimal("0.00")
+            service_items_total += base_cost
+            detailed_order_items.append(
+                {
+                    "item_details": s_item,
+                    "calculated_costs": {
+                        "base_cost": base_cost,
+                        "box_cost": Decimal("0.00"),
+                        "printing_cost": Decimal("0.00"),
+                        "total_cost": base_cost,
+                    },
+                    "box_orders": [],
+                    "printing_jobs": [],
+                }
+            )
+
+        grand_total = items_total + service_items_total + total_box_cost + total_printing_cost
         tax_amount = grand_total * (bill.tax_percentage / Decimal("100.0"))
         total_with_tax = grand_total + tax_amount
 
@@ -309,7 +431,7 @@ class BillService:
             "bill_instance": bill,
             "detailed_order_items": detailed_order_items,
             "summary": {
-                "items_subtotal": items_total,
+                "items_subtotal": items_total + service_items_total,
                 "total_box_cost": total_box_cost,
                 "total_printing_cost": total_printing_cost,
                 "grand_total": grand_total,
@@ -330,6 +452,7 @@ class BillService:
 
         box_orders = BoxOrder.objects.filter(order_item_id__in=order_item_ids)
         printing_jobs = PrintingJob.objects.filter(order_item_id__in=order_item_ids)
+        all_service_items = ServiceOrderItem.objects.filter(order_id__in=order_ids)
 
         order_items_map: dict[int, list[OrderItem]] = {}
         for item in all_order_items:
@@ -343,7 +466,16 @@ class BillService:
         for pj in printing_jobs:
             printing_jobs_map.setdefault(pj.order_item_id, []).append(pj)
 
-        prefetched_data = {"order_items_map": order_items_map, "box_orders_map": box_orders_map, "printing_jobs_map": printing_jobs_map}
+        service_items_map: dict[int, list[ServiceOrderItem]] = {}
+        for si in all_service_items:
+            service_items_map.setdefault(si.order_id, []).append(si)
+
+        prefetched_data = {
+            "order_items_map": order_items_map,
+            "box_orders_map": box_orders_map,
+            "printing_jobs_map": printing_jobs_map,
+            "service_items_map": service_items_map,
+        }
 
         results = []
         for bill in bills:
@@ -369,6 +501,15 @@ class BillService:
         if bill.payment_status != new_status:
             bill.payment_status = new_status
             bill.save(update_fields=["payment_status", "updated_at"])
+
+            # Sync Order status with payment status per business rule:
+            # - If PAID -> set Order to FULLY_PAID (terminal/done), unless already DELIVERED
+            # - If PARTIAL/PENDING -> do not downgrade Order status
+            order = bill.order
+            if new_status == Bill.PaymentStatus.PAID:
+                if order.order_status != Order.OrderStatus.DELIVERED and order.order_status != Order.OrderStatus.FULLY_PAID:
+                    order.order_status = Order.OrderStatus.FULLY_PAID
+                    order.save(update_fields=["order_status", "updated_at"])
 
         return bill
 
@@ -403,3 +544,71 @@ class PaymentService:
         )
 
         return payment
+
+
+class ServiceOrderItemService:
+    @staticmethod
+    def create_service_item(order: Order, *, service_type: str, quantity: int, total_cost: Decimal, total_expense: Decimal | None = None, description: str = ""):
+        if quantity is None or quantity <= 0:
+            raise Conflict("Quantity must be greater than zero")
+
+        item = ServiceOrderItem.objects.create(
+            order=order,
+            service_type=service_type,
+            quantity=quantity,
+            total_cost=total_cost,
+            total_expense=total_expense,
+            description=description or "",
+        )
+        return item
+
+    @staticmethod
+    def update_service_items(order: Order, items: list[dict] | None):
+        for payload in items or []:
+            s_item = ServiceOrderItem.objects.get(id=payload.get("service_order_item_id"), order=order)
+
+            quantity = payload.get("quantity")
+            if quantity is not None:
+                if quantity <= 0:
+                    raise Conflict("Quantity must be greater than zero")
+                s_item.quantity = quantity
+
+            if (status := payload.get("procurement_status")) is not None:
+                s_item.procurement_status = status
+
+            if (total_cost := payload.get("total_cost")) is not None:
+                s_item.total_cost = total_cost
+
+            if "total_expense" in payload:
+                s_item.total_expense = payload.get("total_expense")
+
+            if (desc := payload.get("description")) is not None:
+                s_item.description = desc
+
+            s_item.save()
+        # Service items may affect READY status
+        OrderStatusService.mark_in_progress_if_started(order)
+        OrderStatusService.recalculate_ready(order)
+        return order
+
+    @staticmethod
+    def add_service_items(order: Order, add_items: list[dict] | None):
+        for payload in add_items or []:
+            ServiceOrderItemService.create_service_item(
+                order,
+                service_type=payload.get("service_type"),
+                quantity=payload.get("quantity"),
+                total_cost=payload.get("total_cost"),
+                total_expense=payload.get("total_expense"),
+                description=payload.get("description", ""),
+            )
+        OrderStatusService.mark_in_progress_if_started(order)
+        OrderStatusService.recalculate_ready(order)
+        return order
+
+    @staticmethod
+    def remove_service_items(order: Order, remove_item_ids: list[str] | None):
+        for sid in remove_item_ids or []:
+            ServiceOrderItem.objects.filter(id=sid, order=order).delete()
+        OrderStatusService.recalculate_ready(order)
+        return order

@@ -52,7 +52,7 @@ class AnalyticsService:
 
     @staticmethod
     def get_pending_orders():
-        return Order.objects.exclude(order_status=Order.OrderStatus.DELIVERED).count()
+        return Order.objects.exclude(order_status__in=[Order.OrderStatus.DELIVERED, Order.OrderStatus.FULLY_PAID]).count()
 
     @staticmethod
     def get_todays_orders(today: date):
@@ -70,7 +70,11 @@ class AnalyticsService:
         """
         # Get all orders created in the specified period
         period_orders = Order.objects.filter(order_date__date__range=[start_date, end_date]).prefetch_related(
-            "order_items__card", "order_items__printing_jobs", "order_items__box_orders", "order_items__inventory_transactions"
+            "order_items__card",
+            "order_items__printing_jobs",
+            "order_items__box_orders",
+            "order_items__inventory_transactions",
+            "service_items",
         )
 
         total_profit = Decimal("0.0")
@@ -118,6 +122,17 @@ class AnalyticsService:
 
                 for box in item.box_orders.all():
                     current_order_profit += box.total_box_cost - box.total_box_expense
+
+            if not is_ready_for_calculation:
+                pending_orders_count += 1
+                continue
+
+            # Include third-party service items (must have total_expense to finalize)
+            for s_item in order.service_items.all():
+                if s_item.total_expense is None:
+                    is_ready_for_calculation = False
+                    break
+                current_order_profit += (s_item.total_cost - s_item.total_expense)
 
             if is_ready_for_calculation:
                 total_profit += current_order_profit
@@ -181,7 +196,9 @@ class AnalyticsService:
 
     @staticmethod
     def get_low_stock_cards_list():
-        return Card.objects.filter(quantity__gt=settings.OUT_OF_STOCK_THRESHOLD, quantity__lte=settings.LOW_STOCK_THRESHOLD, is_active=True).select_related("vendor")
+        return Card.objects.filter(
+            quantity__gt=settings.OUT_OF_STOCK_THRESHOLD, quantity__lte=settings.LOW_STOCK_THRESHOLD, is_active=True
+        ).select_related("vendor")
 
     @staticmethod
     def get_out_of_stock_cards_list():
@@ -189,7 +206,10 @@ class AnalyticsService:
 
     @staticmethod
     def get_pending_orders_list():
-        return Order.objects.exclude(order_status=Order.OrderStatus.DELIVERED).select_related("customer", "staff").order_by("-order_date")
+        return (
+            Order.objects.exclude(order_status__in=[Order.OrderStatus.DELIVERED, Order.OrderStatus.FULLY_PAID])
+            .select_related("customer", "staff").order_by("-order_date")
+        )
 
     @staticmethod
     def get_pending_bills_list():

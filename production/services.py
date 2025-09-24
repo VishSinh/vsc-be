@@ -1,4 +1,5 @@
 from core.exceptions import Conflict, ResourceNotFound
+from orders.services import OrderStatusService
 from production.models import BoxMaker, BoxOrder, Printer, PrintingJob, TracingStudio
 
 
@@ -73,6 +74,12 @@ class BoxOrderService:
             box_order.box_maker = BoxMakerService.validate_box_maker_exists(box_maker_id)
         BoxOrderService.update_box_order_status(box_order, box_maker_id=box_maker_id)
         box_order.save()
+
+        # Update parent order status (IN_PROGRESS/READY recalculation)
+        parent_order = box_order.order_item.order
+        changed = OrderStatusService.mark_in_progress_if_started(parent_order)
+        if not changed:
+            OrderStatusService.recalculate_ready(parent_order)
         return box_order
 
     @staticmethod
@@ -223,6 +230,12 @@ class PrintingJobService:
             printing_job.tracing_studio = TracingStudioService.validate_tracing_studio_exists(tracing_studio_id)
         PrintingJobService.update_printing_job_status(printing_job, printer_id=printer_id, tracing_studio_id=tracing_studio_id)
         printing_job.save()
+
+        # Update parent order status (IN_PROGRESS/READY recalculation)
+        parent_order = printing_job.order_item.order
+        changed = OrderStatusService.mark_in_progress_if_started(parent_order)
+        if not changed:
+            OrderStatusService.recalculate_ready(parent_order)
         return printing_job
 
     @staticmethod

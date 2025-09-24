@@ -30,6 +30,6 @@ class ExceptionMiddleware:
         # Add status_code attribute to exception if it doesn't exist
         if not hasattr(exception, "status_code"):
             print("Exception does not have status code")
-            setattr(exception, "status_code", status.HTTP_500_INTERNAL_SERVER_ERROR)
+            exception.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
         return APIResponse(success=False, status_code=getattr(exception, "status_code", 500), error=exception).response()

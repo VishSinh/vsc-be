@@ -24,6 +24,7 @@ class Order(models.Model):
         IN_PROGRESS = "IN_PROGRESS", "In Progress"
         READY = "READY", "Ready"
         DELIVERED = "DELIVERED", "Delivered"
+        FULLY_PAID = "FULLY_PAID", "Fully Paid"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=TEXT_LENGTH)
@@ -151,3 +152,37 @@ class BillAdjustment(models.Model):
 
     def __str__(self):
         return f"{self.adjustment_type} - {self.amount}"
+
+
+class ServiceOrderItem(models.Model):
+    class ServiceType(models.TextChoices):
+        DIGITAL_CARD = "DIGITAL_CARD", "Digital Card"
+        ABHINANDAN_PATR = "ABHINANDAN_PATR", "Abhinandan Patr"
+        CAR_POSTER = "CAR_POSTER", "Car Poster"
+        DIGITAL_VISITING_CARD = "DIGITAL_VISITING_CARD", "Digital Visiting Card"
+
+    class ProcurementStatus(models.TextChoices):
+        REQUESTED = "REQUESTED", "Requested"
+        ORDERED = "ORDERED", "Ordered"
+        RECEIVED = "RECEIVED", "Received"
+        DELIVERED = "DELIVERED", "Delivered"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="service_items")
+    service_type = models.CharField(max_length=TEXT_LENGTH, choices=ServiceType.choices)
+    quantity = models.PositiveIntegerField()
+    procurement_status = models.CharField(max_length=STATUS_LENGTH, choices=ProcurementStatus.choices, default=ProcurementStatus.REQUESTED)
+    total_cost = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES)
+    total_expense = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES, null=True, blank=True)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "service_order_items"
+        verbose_name = "Service Order Item"
+        verbose_name_plural = "Service Order Items"
+
+    def __str__(self):
+        return f"{self.service_type} x {self.quantity}"

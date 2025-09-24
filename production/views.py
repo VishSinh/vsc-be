@@ -14,6 +14,7 @@ from production.serializers import (
     TracingStudioQueryParams,
 )
 from production.services import BoxMakerService, BoxOrderService, PrinterService, PrintingJobService, TracingStudioService
+from orders.services import OrderStatusService
 
 
 class BoxOrderView(APIView):
@@ -45,6 +46,12 @@ class BoxOrderView(APIView):
         BoxOrderService.update_box_order_status(box_order, box_maker_id=body.get_value("box_maker_id"))
 
         box_order.save()
+
+        # Update parent order status after change
+        parent_order = box_order.order_item.order
+        changed = OrderStatusService.mark_in_progress_if_started(parent_order)
+        if not changed:
+            OrderStatusService.recalculate_ready(parent_order)
 
         to_return = model_unwrap(box_order)
         to_return["message"] = "Box order updated successfully"
@@ -81,6 +88,12 @@ class PrintingJobView(APIView):
             printing_job, printer_id=body.get_value("printer_id"), tracing_studio_id=body.get_value("tracing_studio_id")
         )
         printing_job.save()
+
+        # Update parent order status after change
+        parent_order = printing_job.order_item.order
+        changed = OrderStatusService.mark_in_progress_if_started(parent_order)
+        if not changed:
+            OrderStatusService.recalculate_ready(parent_order)
 
         to_return = model_unwrap(printing_job)
         to_return["message"] = "Printing job updated successfully"

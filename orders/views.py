@@ -15,7 +15,7 @@ from orders.serializers import (
     PaymentCreateSerializer,
     PaymentQueryParams,
 )
-from orders.services import BillService, OrderService, PaymentService
+from orders.services import BillService, OrderService, PaymentService, ServiceOrderItemService
 from production.services import BoxOrderService, PrintingJobService
 
 
@@ -33,6 +33,7 @@ class OrderView(APIView):
                     item_data["printing_jobs"] = model_unwrap(order_item.printing_jobs.all())
                 order_items_data.append(item_data)
             order_data["order_items"] = order_items_data
+            order_data["service_items"] = model_unwrap(order.service_items.all())
             order_data["bill_id"] = model_unwrap(order.bill).get("id")
             return order_data
 
@@ -67,6 +68,7 @@ class OrderView(APIView):
         order_date = body.get_value("order_date", timezone.now())
         delivery_date = body.get_value("delivery_date")
         order_items = body.get_value("order_items")
+        service_items = body.get_value("service_items", [])
         special_instruction = body.get_value("special_instruction", "")
 
         # Create Order
@@ -74,6 +76,7 @@ class OrderView(APIView):
 
         # Create Order Items and Production Services
         created_order_items = []
+        created_service_items = []
         for item in order_items:
             order_item = OrderService.create_order_item(
                 order=order,
@@ -99,11 +102,24 @@ class OrderView(APIView):
 
             created_order_items.append(order_item_data)
 
+        # Create Service Items
+        for s in service_items or []:
+            s_item = ServiceOrderItemService.create_service_item(
+                order,
+                service_type=s.get("service_type"),
+                quantity=s.get("quantity"),
+                total_cost=s.get("total_cost"),
+                total_expense=s.get("total_expense"),
+                description=s.get("description", ""),
+            )
+            created_service_items.append(model_unwrap(s_item))
+
         # Create Bill
         bill = BillService.create_bill(order)
 
         order_data = model_unwrap(order)
         order_data["order_items"] = created_order_items
+        order_data["service_items"] = created_service_items
 
         order_data["bill_id"] = model_unwrap(bill).get("id")
 
@@ -120,6 +136,9 @@ class OrderView(APIView):
         OrderService.update_order_items(order, body.get_value("order_items"))
         OrderService.remove_order_items(order, body.get_value("remove_item_ids"))
         OrderService.add_order_items(order, body.get_value("add_items"))
+        ServiceOrderItemService.update_service_items(order, body.get_value("service_items"))
+        ServiceOrderItemService.remove_service_items(order, body.get_value("remove_service_item_ids"))
+        ServiceOrderItemService.add_service_items(order, body.get_value("add_service_items"))
         updated_order = OrderService.update_order_misc(
             order, body.get_value("order_status"), body.get_value("delivery_date"), body.get_value("special_instruction")
         )
