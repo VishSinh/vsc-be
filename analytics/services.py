@@ -235,3 +235,12 @@ class AnalyticsService:
             .select_related("order_item__order__customer", "box_maker")
             .order_by("-created_at")
         )
+
+    @staticmethod
+    def get_todays_orders_list():
+        today = timezone.now().date()
+        return (
+            Order.objects.filter(order_date__date=today)
+            .select_related("customer", "staff")
+            .order_by("-order_date")
+        )

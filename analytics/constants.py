@@ -9,3 +9,4 @@ class AnalyticsType(models.TextChoices):
     PENDING_BILLS = "pending_bills", "Pending Bills"
     PENDING_PRINTING_JOBS = "pending_printing_jobs", "Pending Printing Jobs"
     PENDING_BOX_JOBS = "pending_box_jobs", "Pending Box Jobs"
+    TODAYS_ORDERS = "todays_orders", "Today's Orders"

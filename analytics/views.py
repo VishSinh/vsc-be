@@ -52,6 +52,7 @@ class DetailedAnalyticsView(APIView):
             AnalyticsType.PENDING_BILLS: AnalyticsService.get_pending_bills_list,
             AnalyticsType.PENDING_PRINTING_JOBS: AnalyticsService.get_pending_printing_jobs_list,
             AnalyticsType.PENDING_BOX_JOBS: AnalyticsService.get_pending_box_jobs_list,
+            AnalyticsType.TODAYS_ORDERS: AnalyticsService.get_todays_orders_list,
         }
 
         fetcher = data_fetchers.get(analytics_type)
