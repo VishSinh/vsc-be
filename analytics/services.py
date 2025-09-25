@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from inventory.models import Card, InventoryTransaction
 from orders.models import Bill, Order
+from orders.services import OrderService
 from production.models import BoxOrder, PrintingJob
 
 
@@ -240,7 +241,8 @@ class AnalyticsService:
     def get_todays_orders_list():
         today = timezone.now().date()
         return (
-            Order.objects.filter(order_date__date=today)
-            .select_related("customer", "staff")
+            OrderService.get_orders_queryset()
+            .select_related("bill")
+            .filter(order_date__date=today)
             .order_by("-order_date")
         )
