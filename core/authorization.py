@@ -89,7 +89,8 @@ class RolePermissions:
         Permission.ORDER_READ,
         Permission.ORDER_CREATE,
         Permission.BILL_READ,
-
+        Permission.CUSTOMER_READ,
+        Permission.CUSTOMER_CREATE,
     ]
 
     SALES_PERMISSIONS = [
@@ -99,7 +100,8 @@ class RolePermissions:
         Permission.ORDER_READ,
         Permission.ORDER_CREATE,
         Permission.BILL_READ,
-
+        Permission.CUSTOMER_READ,
+        Permission.CUSTOMER_CREATE,
     ]
 
 
