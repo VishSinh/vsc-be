@@ -85,7 +85,15 @@ class StaffView(APIView):
         )
         return model_unwrap(
             staff_page,
-            exclude=["password", "last_login", "is_superuser", "is_staff"],
+            exclude=[
+                "password",
+                "last_login",
+                "is_superuser",
+                "is_staff",
+                "first_name",
+                "last_name",
+                "email",
+            ],
         ), page_info
 
 
@@ -119,6 +127,6 @@ class MeView(APIView):
         # Return a concise profile; exclude password and timestamps by default
         data = model_unwrap(
             staff,
-            exclude=["password", "last_login", "is_superuser", "is_staff"],
+            exclude=["password", "last_login", "is_superuser", "is_staff", "first_name", "last_name", "email"],
         )
         return data
