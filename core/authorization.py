@@ -20,22 +20,12 @@ class Permission:
     ACCOUNT_READ = "account.read"
     ACCOUNT_UPDATE = "account.update"
     ACCOUNT_DELETE = "account.delete"
-    ACCOUNT_LIST = "account.list"
-
-    # Inventory Management
-    INVENTORY_CREATE = "inventory.create"
-    INVENTORY_READ = "inventory.read"
-    INVENTORY_UPDATE = "inventory.update"
-    INVENTORY_DELETE = "inventory.delete"
-    INVENTORY_LIST = "inventory.list"
-    INVENTORY_TRANSACTION = "inventory.transaction"
 
     # Order Management
     ORDER_CREATE = "order.create"
     ORDER_READ = "order.read"
     ORDER_UPDATE = "order.update"
     ORDER_DELETE = "order.delete"
-    ORDER_LIST = "order.list"
     ORDER_APPROVE = "order.approve"
     ORDER_CANCEL = "order.cancel"
 
@@ -44,16 +34,15 @@ class Permission:
     PRODUCTION_READ = "production.read"
     PRODUCTION_UPDATE = "production.update"
     PRODUCTION_DELETE = "production.delete"
-    PRODUCTION_LIST = "production.list"
+
 
     # Financial Management
-    BILL_CREATE = "bill.create"
     BILL_READ = "bill.read"
-    BILL_UPDATE = "bill.update"
-    BILL_DELETE = "bill.delete"
-    BILL_LIST = "bill.list"
-    PAYMENT_PROCESS = "payment.process"
-    PAYMENT_REFUND = "payment.refund"
+
+    BILL_ADJUSTMENT_CREATE = "bill.adjustment.create"
+
+    PAYMENT_READ = "payment.read"
+    PAYMENT_CREATE = "payment.create"
 
     # Audit Management
     AUDIT_READ = "audit.read"
@@ -64,7 +53,7 @@ class Permission:
     VENDOR_READ = "vendor.read"
     VENDOR_UPDATE = "vendor.update"
     VENDOR_DELETE = "vendor.delete"
-    VENDOR_LIST = "vendor.list"
+    
 
     # Card Management
     CARD_CREATE = "card.create"
@@ -72,14 +61,14 @@ class Permission:
     CARD_PURCHASE = "card.purchase"
     CARD_UPDATE = "card.update"
     CARD_DELETE = "card.delete"
-    CARD_LIST = "card.list"
+    
 
     # Customer Management
     CUSTOMER_CREATE = "customer.create"
     CUSTOMER_READ = "customer.read"
     CUSTOMER_UPDATE = "customer.update"
     CUSTOMER_DELETE = "customer.delete"
-    CUSTOMER_LIST = "customer.list"
+    
 
     # Dashboard Management
     DASHBOARD_READ = "dashboard.read"
@@ -94,47 +83,23 @@ class RolePermissions:
     ADMIN_PERMISSIONS = [value for name, value in Permission.__dict__.items() if not name.startswith("__") and not callable(value)]
 
     MANAGER_PERMISSIONS = [
-        # Management level access
         Permission.ACCOUNT_READ,
-        Permission.ACCOUNT_UPDATE,
-        Permission.ACCOUNT_LIST,
-        Permission.INVENTORY_CREATE,
-        Permission.INVENTORY_READ,
-        Permission.INVENTORY_UPDATE,
-        Permission.INVENTORY_LIST,
-        Permission.INVENTORY_TRANSACTION,
-        Permission.ORDER_CREATE,
+        Permission.CARD_READ,
+        Permission.CARD_CREATE,
         Permission.ORDER_READ,
-        Permission.ORDER_UPDATE,
-        Permission.ORDER_LIST,
-        Permission.ORDER_APPROVE,
-        Permission.ORDER_CANCEL,
-        Permission.PRODUCTION_CREATE,
-        Permission.PRODUCTION_READ,
-        Permission.PRODUCTION_UPDATE,
-        Permission.PRODUCTION_LIST,
-        Permission.BILL_CREATE,
+        Permission.ORDER_CREATE,
         Permission.BILL_READ,
-        Permission.BILL_UPDATE,
-        Permission.BILL_LIST,
-        Permission.PAYMENT_PROCESS,
-        Permission.AUDIT_READ,
+
     ]
 
     SALES_PERMISSIONS = [
-        # Basic operational access
         Permission.ACCOUNT_READ,
-        Permission.ACCOUNT_LIST,
-        Permission.INVENTORY_READ,
-        Permission.INVENTORY_LIST,
-        Permission.INVENTORY_TRANSACTION,
-        Permission.ORDER_CREATE,
+        Permission.CARD_READ,
+        Permission.CARD_CREATE,
         Permission.ORDER_READ,
-        Permission.ORDER_LIST,
-        Permission.PRODUCTION_READ,
-        Permission.PRODUCTION_LIST,
+        Permission.ORDER_CREATE,
         Permission.BILL_READ,
-        Permission.BILL_LIST,
+
     ]
 
 
