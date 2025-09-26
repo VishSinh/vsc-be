@@ -55,15 +55,25 @@ class OrderCreateSerializer(BaseSerializer):
         service_type = serializers.ChoiceField(choices=ServiceOrderItem.ServiceType.choices, required=True)
         quantity = serializers.IntegerField(required=True, min_value=1)
         total_cost = serializers.DecimalField(required=True, max_digits=10, decimal_places=2)
-        total_expense = serializers.DecimalField(required=False, allow_null=True, max_digits=10, decimal_places=2)
+        total_expense = serializers.DecimalField(required=True, max_digits=10, decimal_places=2)
         description = serializers.CharField(required=False, allow_blank=True)
 
     customer_id = serializers.UUIDField(required=True)
     name = serializers.CharField(required=True)
-    order_items = serializers.ListField(child=OrderItems(), required=True)
+    order_items = serializers.ListField(child=OrderItems(), required=False)
     service_items = serializers.ListField(child=ServiceItems(), required=False)
     order_date = serializers.DateTimeField(required=False)
     delivery_date = serializers.DateTimeField(required=True)
+
+    def validate(self, attrs):
+        """Validate that either order_items or service_items (or both) are provided"""
+        order_items = attrs.get('order_items')
+        service_items = attrs.get('service_items')
+
+        if not order_items and not service_items:
+            raise serializers.ValidationError("Either order_items or service_items must be provided")
+
+        return attrs
 
     def validate_order_items(self, value):
         """Validate that all required fields are provided when production services are requested"""
@@ -79,6 +89,7 @@ class OrderCreateSerializer(BaseSerializer):
                     raise serializers.ValidationError("total_printing_cost is required when requires_printing is True")
 
         return value
+
 
 
 class OrderUpdateSerializer(BaseSerializer):

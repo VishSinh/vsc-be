@@ -1,4 +1,6 @@
-from django.db import transaction
+from decimal import Decimal
+
+from django.db import models, transaction
 from django.utils import timezone
 from rest_framework.views import APIView
 
@@ -165,6 +167,10 @@ class BillView(APIView):
             bill_instance = bill_details["bill_instance"]
             detailed_items = bill_details["detailed_order_items"]
             summary = bill_details["summary"]
+
+            # Calculate pending amount = total_with_tax - sum(payments)
+            total_paid = bill_instance.payments.aggregate(total=models.Sum("amount")).get("total") or Decimal("0.00")
+            summary["pending_amount"] = summary["total_with_tax"] - total_paid
 
             serialized_order_items = []
             for item_data in detailed_items:
