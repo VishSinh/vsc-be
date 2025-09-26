@@ -10,6 +10,7 @@ urlpatterns = [
     path("auth/register/", RegisterView.as_view(), name="register"),
     # Customer endpoints
     path("customers/", CustomerView.as_view(), name="customers"),
+    path("customers/<uuid:customer_id>/", CustomerView.as_view(), name="customer_detail"),
     # Permission endpoints
     path("permissions/", CurrentStaffPermissionsView.as_view(), name="permissions_current"),
     path("permissions/all/", PermissionsView.as_view(), name="permissions_all"),

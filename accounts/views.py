@@ -38,9 +38,12 @@ class LoginView(APIView):
 class CustomerView(APIView):
     @forge
     @require_permission(Permission.CUSTOMER_READ)
-    def get(self, request):
-        params = CustomerQueryParams.validate_params(request)
+    def get(self, request, customer_id=None):
+        if customer_id:
+            customer = CustomerService.get_customer_by_id(customer_id)
+            return model_unwrap(customer)
 
+        params = CustomerQueryParams.validate_params(request)
         customer = CustomerService.get_customer_by_phone(params.get_value("phone"))
         return model_unwrap(customer)
 

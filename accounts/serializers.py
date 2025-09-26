@@ -8,7 +8,7 @@ from core.helpers.param_serializer import ParamSerializer
 
 # Parameter Serializers
 class CustomerQueryParams(ParamSerializer):
-    phone = serializers.CharField(required=True, min_length=SERIALIZER_MIN_PHONE_LENGTH, max_length=SERIALIZER_MAX_PHONE_LENGTH)
+    phone = serializers.CharField(required=False, min_length=SERIALIZER_MIN_PHONE_LENGTH, max_length=SERIALIZER_MAX_PHONE_LENGTH)
 
 
 # Request Serializers
