@@ -1,9 +1,10 @@
 from rest_framework.views import APIView
 
-from accounts.serializers import CustomerCreateSerializer, CustomerQueryParams, LoginSerializer, RegisterSerializer
+from accounts.serializers import CustomerCreateSerializer, CustomerQueryParams, LoginSerializer, RegisterSerializer, StaffQueryParams
 from accounts.services import CustomerService, StaffService
 from core.authorization import AuthorizationService, Permission, require_permission
 from core.decorators import forge
+from core.helpers.pagination import PaginationHelper
 from core.utils import model_unwrap
 
 
@@ -71,6 +72,21 @@ class PermissionsView(APIView):
                 permissions.append({"name": name, "value": value, "description": name.replace("_", " ").title()})
 
         return {"permissions": permissions, "total_count": len(permissions)}
+
+
+class StaffView(APIView):
+    @forge
+    @require_permission(Permission.ACCOUNT_READ)
+    def get(self, request):
+        params = StaffQueryParams.validate_params(request)
+        staff_queryset = StaffService.get_staffs()
+        staff_page, page_info = PaginationHelper.paginate_queryset(
+            staff_queryset, params.get_value("page"), params.get_value("page_size")
+        )
+        return model_unwrap(
+            staff_page,
+            exclude=["password", "last_login", "is_superuser", "is_staff"],
+        ), page_info
 
 
 class CurrentStaffPermissionsView(APIView):

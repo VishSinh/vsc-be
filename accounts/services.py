@@ -68,6 +68,13 @@ class StaffService:
             raise ResourceNotFound("Staff member not found")
         return staff
 
+    @staticmethod
+    def get_staffs():
+        """
+        Retrieves all active staff members ordered by name.
+        """
+        return Staff.objects.filter(is_active=True).order_by("name")
+
 
 class CustomerService:
     @staticmethod

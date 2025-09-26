@@ -1,6 +1,6 @@
 from django.urls import path
 
-from accounts.views import CurrentStaffPermissionsView, CustomerView, LoginView, MeView, PermissionsView, RegisterView
+from accounts.views import CurrentStaffPermissionsView, CustomerView, LoginView, MeView, PermissionsView, RegisterView, StaffView
 
 app_name = "accounts"
 
@@ -16,4 +16,6 @@ urlpatterns = [
     # Permission endpoints
     path("permissions/", CurrentStaffPermissionsView.as_view(), name="permissions_current"),
     path("permissions/all/", PermissionsView.as_view(), name="permissions_all"),
+    # Staff endpoints
+    path("staff/", StaffView.as_view(), name="staff_list"),
 ]

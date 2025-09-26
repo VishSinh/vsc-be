@@ -1,7 +1,14 @@
 from rest_framework import serializers
 
 from accounts.models import Staff
-from core.constants import SERIALIZER_MAX_NAME_LENGTH, SERIALIZER_MAX_PHONE_LENGTH, SERIALIZER_MIN_NAME_LENGTH, SERIALIZER_MIN_PHONE_LENGTH
+from core.constants import (
+    SERIALIZER_MAX_NAME_LENGTH,
+    SERIALIZER_MAX_PHONE_LENGTH,
+    SERIALIZER_MIN_NAME_LENGTH,
+    SERIALIZER_MIN_PHONE_LENGTH,
+    PAGINATION_DEFAULT_PAGE,
+    PAGINATION_DEFAULT_PAGE_SIZE,
+)
 from core.helpers.base_serializer import BaseSerializer
 from core.helpers.param_serializer import ParamSerializer
 
@@ -9,6 +16,11 @@ from core.helpers.param_serializer import ParamSerializer
 # Parameter Serializers
 class CustomerQueryParams(ParamSerializer):
     phone = serializers.CharField(required=False, min_length=SERIALIZER_MIN_PHONE_LENGTH, max_length=SERIALIZER_MAX_PHONE_LENGTH)
+
+
+class StaffQueryParams(ParamSerializer):
+    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
+    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
 
 
 # Request Serializers
