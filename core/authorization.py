@@ -102,6 +102,7 @@ class RolePermissions:
         Permission.BILL_READ,
         Permission.CUSTOMER_READ,
         Permission.CUSTOMER_CREATE,
+        Permission.VENDOR_READ
     ]
 
 
