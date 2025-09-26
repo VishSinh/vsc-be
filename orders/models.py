@@ -160,6 +160,8 @@ class ServiceOrderItem(models.Model):
         ABHINANDAN_PATR = "ABHINANDAN_PATR", "Abhinandan Patr"
         CAR_POSTER = "CAR_POSTER", "Car Poster"
         DIGITAL_VISITING_CARD = "DIGITAL_VISITING_CARD", "Digital Visiting Card"
+        PRINTING_SERVICE = "PRINTING_SERVICE", "Printing Service"
+        BOX_SERVICE = "BOX_SERVICE", "Box Service"
 
     class ProcurementStatus(models.TextChoices):
         REQUESTED = "REQUESTED", "Requested"
