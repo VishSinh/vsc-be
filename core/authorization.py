@@ -81,6 +81,9 @@ class Permission:
     CUSTOMER_DELETE = "customer.delete"
     CUSTOMER_LIST = "customer.list"
 
+    # Dashboard Management
+    DASHBOARD_READ = "dashboard.read"
+
     # System Management
     SYSTEM_CONFIG = "system.config"
     SYSTEM_BACKUP = "system.backup"
@@ -127,7 +130,6 @@ class RolePermissions:
         Permission.INVENTORY_TRANSACTION,
         Permission.ORDER_CREATE,
         Permission.ORDER_READ,
-        Permission.ORDER_UPDATE,
         Permission.ORDER_LIST,
         Permission.PRODUCTION_READ,
         Permission.PRODUCTION_LIST,

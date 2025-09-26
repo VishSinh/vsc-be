@@ -89,3 +89,20 @@ class CurrentStaffPermissionsView(APIView):
         permissions = AuthorizationService.get_user_permissions(staff)
 
         return {"staff_id": str(staff.id), "staff_role": staff.role, "permissions": permissions, "total_count": len(permissions)}
+
+
+class MeView(APIView):
+    """Return the authenticated staff's profile"""
+
+    @forge
+    def get(self, request):
+        staff = getattr(request, "staff", None)
+        if not staff:
+            return {"error": "No authenticated staff found"}, 401
+
+        # Return a concise profile; exclude password and timestamps by default
+        data = model_unwrap(
+            staff,
+            exclude=["password", "last_login", "is_superuser", "is_staff"],
+        )
+        return data

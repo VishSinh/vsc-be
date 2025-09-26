@@ -1,6 +1,8 @@
 from functools import wraps
 
 from django.conf import settings
+from django.http.response import HttpResponseBase
+from rest_framework.response import Response as DRFResponse
 
 from core.helpers.api_response import APIResponse
 
@@ -77,6 +79,10 @@ def forge(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         result = func(*args, **kwargs)
+
+        # If the view already returned a Response/HttpResponse, pass it through untouched
+        if isinstance(result, (HttpResponseBase, DRFResponse)):
+            return result
 
         if isinstance(result, Exception):
             raise result

@@ -22,6 +22,7 @@ urlpatterns = [
                 path("", include("orders.urls")),
                 path("", include("production.urls")),
                 path("", include("analytics.urls")),
+                path("", include("auditing.urls")),
             ]
         ),
     ),
