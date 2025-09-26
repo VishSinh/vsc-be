@@ -67,8 +67,8 @@ class OrderCreateSerializer(BaseSerializer):
 
     def validate(self, attrs):
         """Validate that either order_items or service_items (or both) are provided"""
-        order_items = attrs.get('order_items')
-        service_items = attrs.get('service_items')
+        order_items = attrs.get("order_items")
+        service_items = attrs.get("service_items")
 
         if not order_items and not service_items:
             raise serializers.ValidationError("Either order_items or service_items must be provided")
@@ -89,7 +89,6 @@ class OrderCreateSerializer(BaseSerializer):
                     raise serializers.ValidationError("total_printing_cost is required when requires_printing is True")
 
         return value
-
 
 
 class OrderUpdateSerializer(BaseSerializer):

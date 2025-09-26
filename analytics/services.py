@@ -240,9 +240,4 @@ class AnalyticsService:
     @staticmethod
     def get_todays_orders_list():
         today = timezone.now().date()
-        return (
-            OrderService.get_orders_queryset()
-            .select_related("bill")
-            .filter(order_date__date=today)
-            .order_by("-order_date")
-        )
+        return OrderService.get_orders_queryset().select_related("bill").filter(order_date__date=today).order_by("-order_date")
