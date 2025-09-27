@@ -19,6 +19,7 @@ from orders.serializers import (
 )
 from orders.services import BillService, OrderService, PaymentService, ServiceOrderItemService
 from production.services import BoxOrderService, PrintingJobService
+from orders.models import OrderItem, ServiceOrderItem
 
 
 class OrderView(APIView):
@@ -173,18 +174,24 @@ class BillView(APIView):
             summary["pending_amount"] = summary["total_with_tax"] - total_paid
 
             serialized_order_items = []
+            serialized_service_items = []
             for item_data in detailed_items:
-                serialized_item = model_unwrap(item_data["item_details"])
+                item = item_data["item_details"]
+                serialized_item = model_unwrap(item)
                 serialized_item["calculated_costs"] = {k: f"{v:.2f}" for k, v in item_data["calculated_costs"].items()}
                 # serialized_item["box_orders"] = model_unwrap(item_data["box_orders"])
                 # serialized_item["printing_jobs"] = model_unwrap(item_data["printing_jobs"])
-                serialized_order_items.append(serialized_item)
+                if isinstance(item, ServiceOrderItem):
+                    serialized_service_items.append(serialized_item)
+                else:
+                    serialized_order_items.append(serialized_item)
 
             serialized_bill = model_unwrap(bill_instance)
             serialized_bill["order"] = model_unwrap(bill_instance.order)
             # serialized_bill["order"]["customer"] = model_unwrap(bill_instance.order.customer)
             # serialized_bill["order"]["staff"] = model_unwrap(bill_instance.order.staff)
             serialized_bill["order"]["order_items"] = serialized_order_items
+            serialized_bill["order"]["service_items"] = serialized_service_items
             serialized_bill["summary"] = {k: f"{v:.2f}" for k, v in summary.items()}
 
             return serialized_bill
