@@ -177,13 +177,15 @@ class BillView(APIView):
             serialized_service_items = []
             for item_data in detailed_items:
                 item = item_data["item_details"]
-                serialized_item = model_unwrap(item)
-                serialized_item["calculated_costs"] = {k: f"{v:.2f}" for k, v in item_data["calculated_costs"].items()}
-                # serialized_item["box_orders"] = model_unwrap(item_data["box_orders"])
-                # serialized_item["printing_jobs"] = model_unwrap(item_data["printing_jobs"])
                 if isinstance(item, ServiceOrderItem):
+                    # Keep service items minimal, matching Order API shape
+                    serialized_item = model_unwrap(item)
                     serialized_service_items.append(serialized_item)
                 else:
+                    serialized_item = model_unwrap(item)
+                    serialized_item["calculated_costs"] = {k: f"{v:.2f}" for k, v in item_data["calculated_costs"].items()}
+                    # serialized_item["box_orders"] = model_unwrap(item_data["box_orders"])
+                    # serialized_item["printing_jobs"] = model_unwrap(item_data["printing_jobs"])
                     serialized_order_items.append(serialized_item)
 
             serialized_bill = model_unwrap(bill_instance)

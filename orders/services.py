@@ -469,6 +469,8 @@ class BillService:
             "bill_instance": bill,
             "detailed_order_items": detailed_order_items,
             "summary": {
+                "order_items_subtotal": items_total,
+                "service_items_subtotal": service_items_total,
                 "items_subtotal": items_total + service_items_total,
                 "total_box_cost": total_box_cost,
                 "total_printing_cost": total_printing_cost,
