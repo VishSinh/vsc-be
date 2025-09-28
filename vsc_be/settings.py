@@ -175,7 +175,14 @@ ENABLE_API_LOGGING = config("ENABLE_API_LOGGING", default=True, cast=bool)
 
 # API audit logging toggles
 ENABLE_API_DB_AUDIT = config("ENABLE_API_DB_AUDIT", default=True, cast=bool)
-AUDIT_EXCLUDED_PATHS: List[str] = [p for p in config("AUDIT_EXCLUDED_PATHS", default="").split(",") if p]
+AUDIT_EXCLUDED_PATHS: List[str] = [
+    p
+    for p in config(
+        "AUDIT_EXCLUDED_PATHS",
+        default="/api/v1/audit/model-logs/,/api/v1/audit/api-logs/",
+    ).split(",")
+    if p
+]
 AUDIT_REDACTED_FIELDS: List[str] = [
     k for k in config("AUDIT_REDACTED_FIELDS", default="password,token,authorization,cookie,secret,api_key").split(",") if k
 ]
