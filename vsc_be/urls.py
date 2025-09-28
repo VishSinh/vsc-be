@@ -4,6 +4,8 @@ from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
 
+from decouple import config
+
 
 def health_view(request):
     return JsonResponse({"status": "ok"})
@@ -27,6 +29,13 @@ urlpatterns = [
         ),
     ),
 ]
+
+# Optionally expose Prometheus metrics when enabled
+try:
+    if config("ENABLE_PROMETHEUS", default=False, cast=bool):
+        urlpatterns.append(path("", include("django_prometheus.urls")))
+except Exception:
+    pass
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

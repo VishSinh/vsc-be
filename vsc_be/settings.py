@@ -162,6 +162,7 @@ SKIP_AUTH_PATTERNS = [
     # "/admin/"
     "/media/",
     "/api/v1/health/",
+    "/metrics",
 ]
 
 
@@ -173,9 +174,19 @@ CORS_ALLOWED_ORIGIN_REGEXES = config("CORS_ALLOWED_ORIGIN_REGEXES", default="").
 # API logging toggle
 ENABLE_API_LOGGING = config("ENABLE_API_LOGGING", default=True, cast=bool)
 
+# Observability toggles
+ENABLE_PROMETHEUS = config("ENABLE_PROMETHEUS", default=True, cast=bool)
+LOG_LEVEL = config("LOG_LEVEL", default="INFO")
+REQUEST_ID_HEADER = config("REQUEST_ID_HEADER", default="X-Request-ID")
+
 # API audit logging toggles
 ENABLE_API_DB_AUDIT = config("ENABLE_API_DB_AUDIT", default=True, cast=bool)
-AUDIT_EXCLUDED_PATHS: List[str] = [p for p in config("AUDIT_EXCLUDED_PATHS", default="").split(",") if p]
+AUDIT_EXCLUDED_PATHS: List[str] = [
+    p for p in config(
+        "AUDIT_EXCLUDED_PATHS",
+        default="/metrics,/api/v1/health/,/api/v1/audit/,/admin/,/media/,/static/",
+    ).split(",") if p
+]
 AUDIT_REDACTED_FIELDS: List[str] = [
     k for k in config("AUDIT_REDACTED_FIELDS", default="password,token,authorization,cookie,secret,api_key").split(",") if k
 ]
@@ -185,3 +196,53 @@ AUDIT_INCLUDE_APPS: List[str] = ["accounts", "inventory", "orders", "production"
 AUDIT_EXCLUDE_APPS: List[str] = []
 AUDIT_EXCLUDE_MODELS: List[str] = ["auditing.ModelAuditLog", "auditing.APIAuditLog"]
 AUDIT_FIELD_IGNORE: Dict[str, List[str]] = {"*": ["created_at", "updated_at", "last_login"]}
+
+
+# -------------------------------------------------
+# Optional: django-prometheus metrics
+# -------------------------------------------------
+if ENABLE_PROMETHEUS:
+    # Add django_prometheus app and middleware
+    if "django_prometheus" not in INSTALLED_APPS:
+        INSTALLED_APPS.append("django_prometheus")
+
+    # Insert Prometheus middlewares as outermost and innermost
+    before_mw = "django_prometheus.middleware.PrometheusBeforeMiddleware"
+    after_mw = "django_prometheus.middleware.PrometheusAfterMiddleware"
+    if before_mw not in MIDDLEWARE:
+        MIDDLEWARE.insert(0, before_mw)
+    if after_mw not in MIDDLEWARE:
+        MIDDLEWARE.append(after_mw)
+
+    # Swap DB engine for metrics (safe no-op if package missing in dev)
+    try:
+        if DATABASES.get("default", {}).get("ENGINE") == "django.db.backends.postgresql":
+            DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.postgresql"
+    except Exception:
+        pass
+
+
+# -------------------------------------------------
+# JSON logging configuration
+# -------------------------------------------------
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {
+            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "fmt": "%(asctime)s %(levelname)s %(name)s %(message)s",
+        }
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+        }
+    },
+    "loggers": {
+        "": {"handlers": ["console"], "level": LOG_LEVEL},
+        "django": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "api": {"handlers": ["console"], "level": LOG_LEVEL, "propagate": False},
+    },
+}

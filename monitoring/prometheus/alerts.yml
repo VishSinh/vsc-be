@@ -1,0 +1,28 @@
+groups:
+  - name: api-alerts
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          (sum(rate(django_http_responses_total_by_status_total{status=~"5.."}[5m]))
+           /
+           sum(rate(django_http_responses_total_by_status_total[5m]))) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API error ratio > 1%"
+          description: "HTTP 5xx ratio is above 1% for 5 minutes."
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(django_http_requests_latency_including_middlewares_seconds_bucket[5m]))
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API p95 latency > 500ms"
+          description: "p95 request latency above 500ms for 5 minutes."
+

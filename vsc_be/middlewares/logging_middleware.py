@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 import uuid
 from typing import Any, Dict, Optional, Union
@@ -8,11 +9,13 @@ from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
 
 from auditing.models import APIAuditLog
+from core.metrics import REQUEST_COUNTER, REQUEST_INFLIGHT
 
 
 class LoggingMiddleware:
     def __init__(self, get_response: Any) -> None:
         self.get_response = get_response
+        self.logger = logging.getLogger("api")
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
         enable_console = getattr(settings, "ENABLE_API_LOGGING", False)
@@ -21,14 +24,34 @@ class LoggingMiddleware:
             enable_db = enable_console
         request_id = uuid.uuid4()
         start = time.monotonic()
-        if enable_console:
-            self._log_request(request)
+        # attach request id for downstream logging and response header
+        setattr(request, "request_id", request_id)
+        skip_internal = self._should_skip_audit(request)
+        if enable_console and not skip_internal:
+            self._log_request(request, request_id)
 
+        # Increment inflight
+        try:
+            REQUEST_INFLIGHT.inc()
+        except Exception:
+            pass
         # Get response
         response = self.get_response(request)
 
-        if enable_console:
-            self._log_response(request, response)
+        # add request id header
+        try:
+            header_name = getattr(settings, "REQUEST_ID_HEADER", "X-Request-ID")
+            response[header_name] = str(request_id)
+        except Exception:
+            pass
+
+        if enable_console and not skip_internal:
+            # include duration_ms in response log for easier Loki filtering
+            try:
+                duration_ms = int((time.monotonic() - start) * 1000)
+            except Exception:
+                duration_ms = None
+            self._log_response(request, response, request_id, duration_ms)
         if enable_db and not self._should_skip_audit(request):
             try:
                 duration_ms = int((time.monotonic() - start) * 1000)
@@ -36,9 +59,18 @@ class LoggingMiddleware:
             except Exception:
                 pass
 
+        # Decrement inflight and increment request counter
+        try:
+            REQUEST_INFLIGHT.dec()
+            if not skip_internal:
+                status = getattr(response, "status_code", None)
+                REQUEST_COUNTER.labels(method=request.method, path=request.path, status=str(status)).inc()
+        except Exception:
+            pass
+
         return response
 
-    def _log_request(self, request: HttpRequest) -> None:
+    def _log_request(self, request: HttpRequest, request_id: uuid.UUID) -> None:
         """Log incoming request details"""
         timestamp = timezone.now().isoformat()
 
@@ -79,9 +111,9 @@ class LoggingMiddleware:
             "body": body_data,
         }
 
-        print(f"📥 INCOMING REQUEST:\n{json.dumps(log_data, indent=2)}")
+        self.logger.info("incoming_request", extra={"event": "incoming_request", "request_id": str(request_id), **log_data})
 
-    def _log_response(self, request: HttpRequest, response: HttpResponse) -> None:
+    def _log_response(self, request: HttpRequest, response: HttpResponse, request_id: uuid.UUID, duration_ms: Optional[int] = None) -> None:
         """Log outgoing response details"""
         timestamp = timezone.now().isoformat()
 
@@ -116,7 +148,18 @@ class LoggingMiddleware:
             "body": body_data,
         }
 
-        print(f"📤 OUTGOING RESPONSE:\n{json.dumps(log_data, indent=2)}")
+        if duration_ms is not None:
+            log_data["duration_ms"] = duration_ms
+
+        self.logger.info(
+            "outgoing_response",
+            extra={
+                "event": "outgoing_response",
+                "request_id": str(request_id),
+                "path": getattr(request, "path", ""),
+                **log_data,
+            },
+        )
 
     def _persist_api_audit(self, request: HttpRequest, response: HttpResponse, request_id: uuid.UUID, duration_ms: int) -> None:
         redacted_keys = set(getattr(settings, "AUDIT_REDACTED_FIELDS", ["password", "token", "authorization", "cookie", "secret", "api_key"]))
@@ -208,6 +251,9 @@ class LoggingMiddleware:
             pass
 
     def _should_skip_audit(self, request: HttpRequest) -> bool:
+        # Skip CORS preflight and explicitly excluded paths
+        if getattr(request, "method", "").upper() == "OPTIONS":
+            return True
         excluded = getattr(settings, "AUDIT_EXCLUDED_PATHS", [])
         try:
             return any(p and p in request.path for p in excluded)

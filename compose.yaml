@@ -26,6 +26,7 @@ services:
     environment:
       - DB_HOST=db
       - DB_PORT=5432
+      - ENABLE_PROMETHEUS=true
     volumes:
       - staticfiles:/app/staticfiles
       - media:/app/media

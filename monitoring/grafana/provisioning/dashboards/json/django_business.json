@@ -1,0 +1,18 @@
+{
+  "title": "Django + Business",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {"type": "timeseries", "title": "API p95 latency (s)", "targets": [{"expr": "histogram_quantile(0.95, sum by (le) (rate(django_http_requests_latency_including_middlewares_seconds_bucket[5m])))", "refId": "A", "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"}}]},
+    {"type": "timeseries", "title": "Requests/sec", "targets": [{"expr": "sum(rate(app_requests_total[5m]))", "refId": "A", "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"}}]},
+    {"type": "timeseries", "title": "Error ratio (5xx / all)", "targets": [{"expr": "sum(rate(django_http_responses_total_by_status_total{status=~\"5..\"}[5m])) / sum(rate(django_http_responses_total_by_status_total[5m]))", "refId": "A", "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"}}]},
+    {"type": "bargauge", "title": "Pending / Low / Out of Stock", "options": {"displayMode": "basic"}, "targets": [
+      {"expr": "business_pending_orders", "refId": "A", "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"}},
+      {"expr": "business_low_stock_items", "refId": "B", "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"}},
+      {"expr": "business_out_of_stock_items", "refId": "C", "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"}}
+    ]},
+    {"type": "table", "title": "p95 by view (top)", "targets": [{"expr": "topk(10, histogram_quantile(0.95, sum by (view, le) (rate(django_http_requests_latency_seconds_by_view_method_bucket{view!~\"prometheus-django-metrics|vsc_be.urls.health_view\"}[5m]))))", "refId": "A", "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"}}]}
+  ]
+}
+

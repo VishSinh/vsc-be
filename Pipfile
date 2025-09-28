@@ -22,6 +22,9 @@ shortuuid = "*"
 dj-database-url = "*"
 gunicorn = "*"
 whitenoise = "*"
+django-prometheus = "*"
+prometheus-client = "*"
+python-json-logger = "*"
 
 [dev-packages]
 black = "*"

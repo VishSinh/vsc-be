@@ -9,6 +9,7 @@ from inventory.models import Card
 from inventory.services import InventoryTransactionService
 from orders.models import Bill, BillAdjustment, Order, OrderItem, Payment, ServiceOrderItem
 from production.models import BoxOrder, PrintingJob
+from core.metrics import ORDERS_CREATED, ORDER_ITEMS_CREATED, SERVICE_ITEMS_CREATED, PENDING_ORDERS
 
 
 class OrderService:
@@ -68,6 +69,11 @@ class OrderService:
 
         InventoryTransactionService.record_sale_transaction(order_item)
 
+        try:
+            ORDER_ITEMS_CREATED.inc()
+        except Exception:
+            pass
+
         return order_item
 
     @staticmethod
@@ -84,7 +90,10 @@ class OrderService:
             delivery_date=delivery_date,
             special_instruction=special_instruction,
         )
-
+        try:
+            ORDERS_CREATED.inc()
+        except Exception:
+            pass
         return order
 
     @staticmethod
@@ -602,6 +611,10 @@ class ServiceOrderItemService:
             total_expense=total_expense,
             description=description or "",
         )
+        try:
+            SERVICE_ITEMS_CREATED.inc()
+        except Exception:
+            pass
         return item
 
     @staticmethod

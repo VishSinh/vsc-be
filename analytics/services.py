@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from inventory.models import Card, InventoryTransaction
+from core.metrics import PENDING_ORDERS, LOW_STOCK_ITEMS, OUT_OF_STOCK_ITEMS
 from orders.models import Bill, Order
 from orders.services import OrderService
 from production.models import BoxOrder, PrintingJob
@@ -15,11 +16,21 @@ from production.models import BoxOrder, PrintingJob
 class AnalyticsService:
     @staticmethod
     def get_low_stock_items():
-        return Card.objects.filter(quantity__gt=settings.OUT_OF_STOCK_THRESHOLD, quantity__lte=settings.LOW_STOCK_THRESHOLD, is_active=True).count()
+        count = Card.objects.filter(quantity__gt=settings.OUT_OF_STOCK_THRESHOLD, quantity__lte=settings.LOW_STOCK_THRESHOLD, is_active=True).count()
+        try:
+            LOW_STOCK_ITEMS.set(count)
+        except Exception:
+            pass
+        return count
 
     @staticmethod
     def get_out_of_stock_items():
-        return Card.objects.filter(quantity__lte=settings.OUT_OF_STOCK_THRESHOLD, is_active=True).count()
+        count = Card.objects.filter(quantity__lte=settings.OUT_OF_STOCK_THRESHOLD, is_active=True).count()
+        try:
+            OUT_OF_STOCK_ITEMS.set(count)
+        except Exception:
+            pass
+        return count
 
     @staticmethod
     def get_total_orders_current_month():
@@ -53,7 +64,12 @@ class AnalyticsService:
 
     @staticmethod
     def get_pending_orders():
-        return Order.objects.exclude(order_status__in=[Order.OrderStatus.DELIVERED, Order.OrderStatus.FULLY_PAID]).count()
+        count = Order.objects.exclude(order_status__in=[Order.OrderStatus.DELIVERED, Order.OrderStatus.FULLY_PAID]).count()
+        try:
+            PENDING_ORDERS.set(count)
+        except Exception:
+            pass
+        return count
 
     @staticmethod
     def get_todays_orders(today: date):
