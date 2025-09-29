@@ -16,6 +16,46 @@ class VendorQueryParams(ParamSerializer):
 
 class CardQueryParams(ParamSerializer):
     barcode = serializers.CharField(required=False)
+    # Filters
+    quantity = serializers.IntegerField(required=False, min_value=0)
+    quantity__gt = serializers.IntegerField(required=False, min_value=0)
+    quantity__gte = serializers.IntegerField(required=False, min_value=0)
+    quantity__lt = serializers.IntegerField(required=False, min_value=0)
+    quantity__lte = serializers.IntegerField(required=False, min_value=0)
+    cost_price = serializers.DecimalField(
+        required=False,
+        max_digits=PRICE_MAX_DIGITS,
+        decimal_places=PRICE_DECIMAL_PLACES,
+        min_value=0,
+    )
+    cost_price__gt = serializers.DecimalField(
+        required=False,
+        max_digits=PRICE_MAX_DIGITS,
+        decimal_places=PRICE_DECIMAL_PLACES,
+        min_value=0,
+    )
+    cost_price__gte = serializers.DecimalField(
+        required=False,
+        max_digits=PRICE_MAX_DIGITS,
+        decimal_places=PRICE_DECIMAL_PLACES,
+        min_value=0,
+    )
+    cost_price__lt = serializers.DecimalField(
+        required=False,
+        max_digits=PRICE_MAX_DIGITS,
+        decimal_places=PRICE_DECIMAL_PLACES,
+        min_value=0,
+    )
+    cost_price__lte = serializers.DecimalField(
+        required=False,
+        max_digits=PRICE_MAX_DIGITS,
+        decimal_places=PRICE_DECIMAL_PLACES,
+        min_value=0,
+    )
+    # Sorting
+    sort_by = serializers.ChoiceField(required=False, choices=["created_at", "cost_price", "quantity"], default="created_at")
+    sort_order = serializers.ChoiceField(required=False, choices=["asc", "desc"], default="desc")
+    # Pagination
     page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
     page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
 

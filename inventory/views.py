@@ -60,6 +60,31 @@ class CardView(APIView):
             return model_unwrap(card)
 
         cards = CardService.get_cards()
+
+        # Filters
+        quantity_val = params.get_value("quantity", None)
+        if quantity_val is not None:
+            cards = cards.filter(quantity=quantity_val)
+        for op in ["gt", "gte", "lt", "lte"]:
+            value = params.get_value(f"quantity__{op}", None)
+            if value is not None:
+                cards = cards.filter(**{f"quantity__{op}": value})
+
+        cost_price_val = params.get_value("cost_price", None)
+        if cost_price_val is not None:
+            cards = cards.filter(cost_price=cost_price_val)
+        for op in ["gt", "gte", "lt", "lte"]:
+            value = params.get_value(f"cost_price__{op}", None)
+            if value is not None:
+                cards = cards.filter(**{f"cost_price__{op}": value})
+
+        # Sorting
+        sort_by = params.get_value("sort_by", "created_at")
+        sort_order = params.get_value("sort_order", "desc")
+        order_field = f"-{sort_by}" if sort_order == "desc" else sort_by
+        cards = cards.order_by(order_field)
+
+        # Pagination
         cards, page_info = PaginationHelper.paginate_queryset(cards, params.get_value("page"), params.get_value("page_size"))
 
         return [model_unwrap(card) for card in cards], page_info

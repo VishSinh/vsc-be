@@ -16,5 +16,3 @@ class AuditLogQueryParams(ParamSerializer):
     model_name = serializers.CharField(required=False)
     endpoint = serializers.CharField(required=False)
     status_code = serializers.IntegerField(required=False)
-
-

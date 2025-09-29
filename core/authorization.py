@@ -35,7 +35,6 @@ class Permission:
     PRODUCTION_UPDATE = "production.update"
     PRODUCTION_DELETE = "production.delete"
 
-
     # Financial Management
     BILL_READ = "bill.read"
 
@@ -53,7 +52,6 @@ class Permission:
     VENDOR_READ = "vendor.read"
     VENDOR_UPDATE = "vendor.update"
     VENDOR_DELETE = "vendor.delete"
-    
 
     # Card Management
     CARD_CREATE = "card.create"
@@ -61,14 +59,12 @@ class Permission:
     CARD_PURCHASE = "card.purchase"
     CARD_UPDATE = "card.update"
     CARD_DELETE = "card.delete"
-    
 
     # Customer Management
     CUSTOMER_CREATE = "customer.create"
     CUSTOMER_READ = "customer.read"
     CUSTOMER_UPDATE = "customer.update"
     CUSTOMER_DELETE = "customer.delete"
-    
 
     # Dashboard Management
     DASHBOARD_READ = "dashboard.read"
@@ -102,7 +98,7 @@ class RolePermissions:
         Permission.BILL_READ,
         Permission.CUSTOMER_READ,
         Permission.CUSTOMER_CREATE,
-        Permission.VENDOR_READ
+        Permission.VENDOR_READ,
     ]
 
 

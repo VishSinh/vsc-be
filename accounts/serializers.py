@@ -2,12 +2,12 @@ from rest_framework import serializers
 
 from accounts.models import Staff
 from core.constants import (
+    PAGINATION_DEFAULT_PAGE,
+    PAGINATION_DEFAULT_PAGE_SIZE,
     SERIALIZER_MAX_NAME_LENGTH,
     SERIALIZER_MAX_PHONE_LENGTH,
     SERIALIZER_MIN_NAME_LENGTH,
     SERIALIZER_MIN_PHONE_LENGTH,
-    PAGINATION_DEFAULT_PAGE,
-    PAGINATION_DEFAULT_PAGE_SIZE,
 )
 from core.helpers.base_serializer import BaseSerializer
 from core.helpers.param_serializer import ParamSerializer

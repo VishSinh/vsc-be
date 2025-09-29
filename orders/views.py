@@ -9,6 +9,7 @@ from core.authorization import Permission, require_permission
 from core.decorators import forge
 from core.helpers.pagination import PaginationHelper
 from core.utils import model_unwrap
+from orders.models import OrderItem, ServiceOrderItem
 from orders.serializers import (
     BillQueryParams,
     OrderCreateSerializer,
@@ -19,7 +20,6 @@ from orders.serializers import (
 )
 from orders.services import BillService, OrderService, PaymentService, ServiceOrderItemService
 from production.services import BoxOrderService, PrintingJobService
-from orders.models import OrderItem, ServiceOrderItem
 
 
 class OrderView(APIView):

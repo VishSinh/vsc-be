@@ -80,21 +80,22 @@ class StaffView(APIView):
     def get(self, request):
         params = StaffQueryParams.validate_params(request)
         staff_queryset = StaffService.get_staffs()
-        staff_page, page_info = PaginationHelper.paginate_queryset(
-            staff_queryset, params.get_value("page"), params.get_value("page_size")
+        staff_page, page_info = PaginationHelper.paginate_queryset(staff_queryset, params.get_value("page"), params.get_value("page_size"))
+        return (
+            model_unwrap(
+                staff_page,
+                exclude=[
+                    "password",
+                    "last_login",
+                    "is_superuser",
+                    "is_staff",
+                    "first_name",
+                    "last_name",
+                    "email",
+                ],
+            ),
+            page_info,
         )
-        return model_unwrap(
-            staff_page,
-            exclude=[
-                "password",
-                "last_login",
-                "is_superuser",
-                "is_staff",
-                "first_name",
-                "last_name",
-                "email",
-            ],
-        ), page_info
 
 
 class CurrentStaffPermissionsView(APIView):
