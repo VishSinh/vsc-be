@@ -3,61 +3,28 @@ from rest_framework import serializers
 from core.constants import NAME_LENGTH, PAGINATION_DEFAULT_PAGE, PAGINATION_DEFAULT_PAGE_SIZE, PHONE_LENGTH, PRICE_DECIMAL_PLACES, PRICE_MAX_DIGITS
 from core.helpers.base_serializer import BaseSerializer
 from core.helpers.param_serializer import ParamSerializer
+from core.helpers.query_params import BaseListParams, build_range_fields
 
 
 # ================================================
 # Parameter Serializers
 # ================================================
-class VendorQueryParams(ParamSerializer):
+class VendorQueryParams(BaseListParams):
     vendor_id = serializers.UUIDField(required=False)
-    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
-    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
 
 
-class CardQueryParams(ParamSerializer):
+class CardQueryParams(BaseListParams):
     barcode = serializers.CharField(required=False)
     # Filters
     quantity = serializers.IntegerField(required=False, min_value=0)
-    quantity__gt = serializers.IntegerField(required=False, min_value=0)
-    quantity__gte = serializers.IntegerField(required=False, min_value=0)
-    quantity__lt = serializers.IntegerField(required=False, min_value=0)
-    quantity__lte = serializers.IntegerField(required=False, min_value=0)
-    cost_price = serializers.DecimalField(
-        required=False,
-        max_digits=PRICE_MAX_DIGITS,
-        decimal_places=PRICE_DECIMAL_PLACES,
-        min_value=0,
-    )
-    cost_price__gt = serializers.DecimalField(
-        required=False,
-        max_digits=PRICE_MAX_DIGITS,
-        decimal_places=PRICE_DECIMAL_PLACES,
-        min_value=0,
-    )
-    cost_price__gte = serializers.DecimalField(
-        required=False,
-        max_digits=PRICE_MAX_DIGITS,
-        decimal_places=PRICE_DECIMAL_PLACES,
-        min_value=0,
-    )
-    cost_price__lt = serializers.DecimalField(
-        required=False,
-        max_digits=PRICE_MAX_DIGITS,
-        decimal_places=PRICE_DECIMAL_PLACES,
-        min_value=0,
-    )
-    cost_price__lte = serializers.DecimalField(
-        required=False,
-        max_digits=PRICE_MAX_DIGITS,
-        decimal_places=PRICE_DECIMAL_PLACES,
-        min_value=0,
-    )
+    cost_price = serializers.DecimalField(required=False, max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES, min_value=0)
+
+    # Dynamically add range fields via reusable builder
+    locals().update(build_range_fields(int_fields=["quantity"], decimal_fields=["cost_price"]))
     # Sorting
     sort_by = serializers.ChoiceField(required=False, choices=["created_at", "cost_price", "quantity"], default="created_at")
     sort_order = serializers.ChoiceField(required=False, choices=["asc", "desc"], default="desc")
-    # Pagination
-    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
-    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
+    # Pagination comes from BaseListParams
 
 
 # class CardSimilarityParams(ParamSerializer):

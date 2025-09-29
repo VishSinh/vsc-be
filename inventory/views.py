@@ -6,6 +6,7 @@ from core.exceptions import BadRequest
 from core.helpers.image_upload import ImageUpload
 from core.helpers.image_utils import ImageUtils
 from core.helpers.pagination import PaginationHelper
+from core.helpers.query_filters import QueryFilterSortHelper
 from core.utils import model_unwrap
 from inventory.serializers import (
     CardPurchaseSerializer,
@@ -61,30 +62,14 @@ class CardView(APIView):
 
         cards = CardService.get_cards()
 
-        # Filters
-        quantity_val = params.get_value("quantity", None)
-        if quantity_val is not None:
-            cards = cards.filter(quantity=quantity_val)
-        for op in ["gt", "gte", "lt", "lte"]:
-            value = params.get_value(f"quantity__{op}", None)
-            if value is not None:
-                cards = cards.filter(**{f"quantity__{op}": value})
+        helper = QueryFilterSortHelper(
+            allowed_filter_fields=["quantity", "cost_price"],
+            allowed_sort_fields=["created_at", "cost_price", "quantity"],
+            default_sort_by="created_at",
+            default_sort_order="desc",
+        )
+        cards = helper.apply(cards, params)
 
-        cost_price_val = params.get_value("cost_price", None)
-        if cost_price_val is not None:
-            cards = cards.filter(cost_price=cost_price_val)
-        for op in ["gt", "gte", "lt", "lte"]:
-            value = params.get_value(f"cost_price__{op}", None)
-            if value is not None:
-                cards = cards.filter(**{f"cost_price__{op}": value})
-
-        # Sorting
-        sort_by = params.get_value("sort_by", "created_at")
-        sort_order = params.get_value("sort_order", "desc")
-        order_field = f"-{sort_by}" if sort_order == "desc" else sort_by
-        cards = cards.order_by(order_field)
-
-        # Pagination
         cards, page_info = PaginationHelper.paginate_queryset(cards, params.get_value("page"), params.get_value("page_size"))
 
         return [model_unwrap(card) for card in cards], page_info

@@ -3,15 +3,23 @@ from rest_framework import serializers
 from core.constants import PAGINATION_DEFAULT_PAGE, PAGINATION_DEFAULT_PAGE_SIZE, SERIALIZER_MAX_PHONE_LENGTH, SERIALIZER_MIN_PHONE_LENGTH
 from core.helpers.base_serializer import BaseSerializer
 from core.helpers.param_serializer import ParamSerializer
+from core.helpers.query_params import BaseListParams, build_date_fields
 from orders.models import Order, Payment, ServiceOrderItem
 from production.models import BoxOrder
 
 
-class OrderQueryParams(ParamSerializer):
+class OrderQueryParams(BaseListParams):
     customer_id = serializers.UUIDField(required=False)
-    order_date = serializers.DateTimeField(required=False)
-    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
-    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
+
+    # Filters
+    delivered_or_paid = serializers.BooleanField(required=False)
+    order_date = serializers.DateField(required=False)
+    # date ranges
+    locals().update(build_date_fields(date_fields=["order_date"], lookups=("__gte", "__lte")))
+
+    # Sorting
+    sort_by = serializers.ChoiceField(required=False, choices=["order_date"], default="order_date")
+    sort_order = serializers.ChoiceField(required=False, choices=["asc", "desc"], default="desc")
 
 
 class BillQueryParams(ParamSerializer):

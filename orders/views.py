@@ -8,6 +8,7 @@ from accounts.services import CustomerService
 from core.authorization import Permission, require_permission
 from core.decorators import forge
 from core.helpers.pagination import PaginationHelper
+from core.helpers.query_filters import QueryFilterSortHelper
 from core.utils import model_unwrap
 from orders.models import OrderItem, ServiceOrderItem
 from orders.serializers import (
@@ -48,8 +49,36 @@ class OrderView(APIView):
 
         orders_queryset = OrderService.get_orders(
             customer_id=params.get_value("customer_id"),
-            order_date=params.get_value("order_date"),
         )
+
+        # Apply filters/sorting
+        def _field_transform(field: str) -> str:
+            # Map logical order_date to date-only DB lookup on order_date
+            if field == "order_date":
+                return "order_date__date"
+            return field
+
+        helper = QueryFilterSortHelper(
+            allowed_filter_fields=["order_date"],
+            allowed_sort_fields=["order_date"],
+            default_sort_by="order_date",
+            default_sort_order="desc",
+            # for dates, only gte/lte; exact date uses the exact field provided
+            per_field_lookups={
+                "order_date": ("", "__gte", "__lte"),
+            },
+            field_transform=_field_transform,
+        )
+
+        orders_queryset = helper.apply(orders_queryset, params)
+
+        # delivered_or_paid filter
+        dop = params.get_value("delivered_or_paid", None)
+        if dop is not None:
+            if dop is True:
+                orders_queryset = orders_queryset.filter(order_status__in=["FULLY_PAID", "DELIVERED"])  # terminal statuses
+            else:
+                orders_queryset = orders_queryset.exclude(order_status__in=["FULLY_PAID", "DELIVERED"])  # non-terminal
 
         orders, page_info = PaginationHelper.paginate_queryset(orders_queryset, params.get_value("page"), params.get_value("page_size"))
 
