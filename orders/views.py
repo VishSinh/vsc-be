@@ -13,13 +13,15 @@ from core.utils import model_unwrap
 from orders.models import OrderItem, ServiceOrderItem
 from orders.serializers import (
     BillQueryParams,
+    BillAdjustmentCreateSerializer,
+    BillAdjustmentQueryParams,
     OrderCreateSerializer,
     OrderQueryParams,
     OrderUpdateSerializer,
     PaymentCreateSerializer,
     PaymentQueryParams,
 )
-from orders.services import BillService, OrderService, PaymentService, ServiceOrderItemService
+from orders.services import BillService, BillAdjustmentService, OrderService, PaymentService, ServiceOrderItemService
 from production.services import BoxOrderService, PrintingJobService
 
 
@@ -200,7 +202,8 @@ class BillView(APIView):
 
             # Calculate pending amount = total_with_tax - sum(payments)
             total_paid = bill_instance.payments.aggregate(total=models.Sum("amount")).get("total") or Decimal("0.00")
-            summary["pending_amount"] = summary["total_with_tax"] - total_paid
+            total_adjusted = bill_instance.adjustments.aggregate(total=models.Sum("amount")).get("total") or Decimal("0.00")
+            summary["pending_amount"] = summary["total_with_tax"] - (total_paid + total_adjusted)
 
             serialized_order_items = []
             serialized_service_items = []
@@ -291,3 +294,39 @@ class PaymentView(APIView):
         BillService.refresh_bill_payment_status(bill_id)
 
         return {"message": "Payment done successfully"}
+
+
+class BillAdjustmentView(APIView):
+    @forge
+    def get(self, request, adjustment_id=None):
+        if adjustment_id:
+            adj = BillAdjustmentService.get_adjustment_by_id(adjustment_id)
+            return model_unwrap(adj)
+
+        params = BillAdjustmentQueryParams.validate_params(request)
+
+        if params.get_value("bill_id"):
+            queryset = BillAdjustmentService.get_adjustments_by_bill_id(params.get_value("bill_id"))
+        else:
+            queryset = BillAdjustmentService.get_adjustments()
+
+        adjustments, page_info = PaginationHelper.paginate_queryset(queryset, params.get_value("page"), params.get_value("page_size"))
+        return model_unwrap(adjustments), page_info
+
+    @forge
+    @transaction.atomic
+    def post(self, request):
+        body = BillAdjustmentCreateSerializer.validate_request(request)
+        bill_id = body.get_value("bill_id")
+
+        BillAdjustmentService.create_adjustment(
+            bill_id=bill_id,
+            staff=request.staff,
+            adjustment_type=body.get_value("adjustment_type"),
+            amount=body.get_value("amount"),
+            reason=body.get_value("reason"),
+        )
+
+        BillService.refresh_bill_payment_status(bill_id)
+
+        return {"message": "Bill adjustment recorded successfully"}

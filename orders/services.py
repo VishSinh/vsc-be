@@ -532,10 +532,16 @@ class BillService:
         payments = Payment.objects.filter(bill=bill)
         total_paid = payments.aggregate(total=models.Sum("amount"))["total"] or Decimal("0.00")
 
+        # Include bill adjustments as eligible credits towards payment status
+        adjustments = BillAdjustment.objects.filter(bill=bill)
+        total_adjusted = adjustments.aggregate(total=models.Sum("amount"))["total"] or Decimal("0.00")
+
+        total_credited = total_paid + total_adjusted
+
         new_status = Bill.PaymentStatus.PENDING
-        if total_paid >= total_due:
+        if total_credited >= total_due:
             new_status = Bill.PaymentStatus.PAID
-        elif total_paid > 0:
+        elif total_credited > 0:
             new_status = Bill.PaymentStatus.PARTIAL
 
         if bill.payment_status != new_status:
@@ -585,6 +591,40 @@ class PaymentService:
 
         return payment
 
+
+class BillAdjustmentService:
+    @staticmethod
+    def get_adjustment_by_id(adjustment_id):
+        adjustment = BillAdjustment.objects.select_related("bill", "staff").filter(id=adjustment_id).first()
+        if not adjustment:
+            from core.exceptions import ResourceNotFound
+
+            raise ResourceNotFound("Bill Adjustment not found")
+        return adjustment
+
+    @staticmethod
+    def get_adjustments_by_bill_id(bill_id):
+        return BillAdjustment.objects.filter(bill_id=bill_id).select_related("staff").order_by("-created_at")
+
+    @staticmethod
+    def get_adjustments():
+        return BillAdjustment.objects.all().select_related("staff").order_by("-created_at")
+
+    @staticmethod
+    def create_adjustment(*, bill_id: str, staff, adjustment_type: str, amount: Decimal, reason: str) -> BillAdjustment:
+        if not BillService.check_bill_exists(bill_id):
+            from core.exceptions import ResourceNotFound
+
+            raise ResourceNotFound("Bill not found")
+
+        adjustment = BillAdjustment.objects.create(
+            bill_id=bill_id,
+            staff=staff,
+            adjustment_type=adjustment_type,
+            amount=amount,
+            reason=reason,
+        )
+        return adjustment
 
 class ServiceOrderItemService:
     @staticmethod

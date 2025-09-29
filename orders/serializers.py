@@ -4,7 +4,7 @@ from core.constants import PAGINATION_DEFAULT_PAGE, PAGINATION_DEFAULT_PAGE_SIZE
 from core.helpers.base_serializer import BaseSerializer
 from core.helpers.param_serializer import ParamSerializer
 from core.helpers.query_params import BaseListParams, build_date_fields
-from orders.models import Order, Payment, ServiceOrderItem
+from orders.models import BillAdjustment, Order, Payment, ServiceOrderItem
 from production.models import BoxOrder
 
 
@@ -35,6 +35,12 @@ class PaymentQueryParams(ParamSerializer):
     page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
 
 
+class BillAdjustmentQueryParams(ParamSerializer):
+    bill_id = serializers.UUIDField(required=False)
+    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
+    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
+
+
 #########################
 
 
@@ -44,6 +50,13 @@ class PaymentCreateSerializer(BaseSerializer):
     payment_mode = serializers.ChoiceField(choices=Payment.PaymentMode.choices, required=True)
     transaction_ref = serializers.CharField(required=False, allow_blank=True)
     notes = serializers.CharField(required=False, allow_blank=True)
+
+
+class BillAdjustmentCreateSerializer(BaseSerializer):
+    bill_id = serializers.UUIDField(required=True)
+    adjustment_type = serializers.ChoiceField(required=True, choices=BillAdjustment.AdjustmentType.choices)
+    amount = serializers.DecimalField(required=True, max_digits=10, decimal_places=2)
+    reason = serializers.CharField(required=True, allow_blank=False)
 
 
 class OrderCreateSerializer(BaseSerializer):

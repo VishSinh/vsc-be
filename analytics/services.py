@@ -7,7 +7,7 @@ from django.db.models import Q, Sum, Count, Max, Min, F, OuterRef, Subquery, Dec
 from django.utils import timezone
 
 from inventory.models import Card, InventoryTransaction
-from orders.models import Bill, Order, OrderItem
+from orders.models import Bill, Order, OrderItem, BillAdjustment
 from core.constants import PRICE_DECIMAL_PLACES
 from orders.services import OrderService
 from production.models import BoxOrder, PrintingJob
@@ -71,13 +71,26 @@ class AnalyticsService:
         It checks if all production expenses have been logged before including an order in the calculation.
         """
         # Get all orders created in the specified period
-        period_orders = Order.objects.filter(order_date__date__range=[start_date, end_date]).prefetch_related(
+        period_orders_qs = Order.objects.filter(order_date__date__range=[start_date, end_date]).prefetch_related(
             "order_items__card",
             "order_items__printing_jobs",
             "order_items__box_orders",
             "order_items__inventory_transactions",
             "service_items",
         )
+        period_orders = list(period_orders_qs)
+
+        # Pre-compute adjustments per order to reflect actual money generated (exclude adjustments)
+        order_ids = [o.id for o in period_orders]
+        adjustments_map: dict[str, Decimal] = {}
+        if order_ids:
+            adj_rows = (
+                BillAdjustment.objects.filter(bill__order_id__in=order_ids)
+                .values("bill__order_id")
+                .annotate(total=Sum("amount"))
+            )
+            for row in adj_rows:
+                adjustments_map[str(row["bill__order_id"])] = row["total"] or Decimal("0.0")
 
         total_profit = Decimal("0.0")
         pending_orders_count = 0
@@ -137,7 +150,9 @@ class AnalyticsService:
                 current_order_profit += s_item.total_cost - s_item.total_expense
 
             if is_ready_for_calculation:
-                total_profit += current_order_profit
+                # Subtract any bill adjustments tied to this order's bill
+                order_adjustments = adjustments_map.get(str(order.id), Decimal("0.0"))
+                total_profit += current_order_profit - order_adjustments
             else:
                 pending_orders_count += 1
 

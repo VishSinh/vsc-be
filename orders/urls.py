@@ -1,6 +1,6 @@
 from django.urls import path
 
-from orders.views import BillView, OrderView, PaymentView
+from orders.views import BillAdjustmentView, BillView, OrderView, PaymentView
 
 app_name = "orders"
 
@@ -11,4 +11,6 @@ urlpatterns = [
     path("bills/<uuid:bill_id>/", BillView.as_view(), name="bill_detail"),
     path("payments/", PaymentView.as_view(), name="payment"),
     path("payments/<uuid:payment_id>/", PaymentView.as_view(), name="payment_detail"),
+    path("bill-adjustments/", BillAdjustmentView.as_view(), name="bill_adjustment"),
+    path("bill-adjustments/<uuid:adjustment_id>/", BillAdjustmentView.as_view(), name="bill_adjustment_detail"),
 ]
