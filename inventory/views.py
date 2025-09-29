@@ -18,6 +18,7 @@ from inventory.serializers import (
     VendorSerializer,
 )
 from inventory.services import CardService, VendorService
+from analytics.services import CardAnalyticsService
 
 
 class VendorView(APIView):
@@ -121,6 +122,16 @@ class CardView(APIView):
     def delete(self, request, card_id):
         CardService.deactivate_card(card_id)
         return {"message": "Card deleted successfully"}
+
+
+class CardDetailView(APIView):
+    @forge
+    @require_permission(Permission.CARD_READ)
+    def get(self, request, card_id):
+
+        stats = CardAnalyticsService.get_card_stats(card_id)
+  
+        return stats
 
 
 class CardSimilarityView(APIView):
