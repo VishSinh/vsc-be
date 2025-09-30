@@ -21,6 +21,7 @@ class DashboardView(APIView):
         todays_orders = AnalyticsService.get_todays_orders(today)
         pending_bills_count = AnalyticsService.get_pending_bills_count()
         profit_analysis = AnalyticsService.get_monthly_profit_analysis()
+        monthly_total_sale = AnalyticsService.get_monthly_total_sale()
         pending_printing, pending_boxing = AnalyticsService.get_pending_production_counts()
 
         return {
@@ -32,6 +33,7 @@ class DashboardView(APIView):
             "todays_orders": todays_orders,
             "pending_bills": pending_bills_count,
             "monthly_profit": f"{profit_analysis['monthly_profit']:.2f}",
+            "total_sale_current_month": f"{monthly_total_sale:.2f}",
             "orders_pending_expense_logging": profit_analysis["orders_pending_expense_logging"],
             "pending_printing_jobs": pending_printing,
             "pending_box_jobs": pending_boxing,
@@ -46,6 +48,7 @@ class DetailedAnalyticsView(APIView):
 
         data_fetchers = {
             AnalyticsType.YEARLY_PROFIT: AnalyticsService.get_yearly_profit_analysis,
+            AnalyticsType.YEARLY_SALE: AnalyticsService.get_yearly_sale_analysis,
             AnalyticsType.LOW_STOCK_CARDS: AnalyticsService.get_low_stock_cards_list,
             AnalyticsType.OUT_OF_STOCK_CARDS: AnalyticsService.get_out_of_stock_cards_list,
             AnalyticsType.PENDING_ORDERS: AnalyticsService.get_pending_orders_list,
@@ -63,8 +66,8 @@ class DetailedAnalyticsView(APIView):
             return
 
         # For methods that return lists of model objects, we serialize them.
-        # For yearly_profit, the data is already a list of dicts.
-        if analytics_type == AnalyticsType.YEARLY_PROFIT:
+        # For yearly_profit/yearly_sale, the data is already a list of dicts.
+        if analytics_type in (AnalyticsType.YEARLY_PROFIT, AnalyticsType.YEARLY_SALE):
             data = fetcher()
             return data
         elif analytics_type == AnalyticsType.TODAYS_ORDERS:

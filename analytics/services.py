@@ -7,7 +7,7 @@ from django.db.models import Q, Sum, Count, Max, Min, F, OuterRef, Subquery, Dec
 from django.utils import timezone
 
 from inventory.models import Card, InventoryTransaction
-from orders.models import Bill, Order, OrderItem, BillAdjustment
+from orders.models import Bill, Order, OrderItem, BillAdjustment, ServiceOrderItem
 from core.constants import PRICE_DECIMAL_PLACES
 from orders.services import OrderService
 from production.models import BoxOrder, PrintingJob
@@ -204,6 +204,80 @@ class AnalyticsService:
             yearly_data.append({"month": start_of_month.strftime("%Y-%m"), "profit": f"{profit_data['profit']:.2f}"})
 
         return yearly_data[::-1]  # Reverse to get oldest month first
+
+    @staticmethod
+    def _calculate_sales_for_period(start_date, end_date):
+        """
+        Calculate gross sales (pre-tax) for the specified period by summing:
+        - Items revenue: (price_per_item - discount_amount) * quantity
+        - Printing job charges: total_printing_cost
+        - Box order charges: total_box_cost
+        - Third-party service items: total_cost
+        """
+        # Items revenue
+        item_revenue_expr = ExpressionWrapper(
+            (F("price_per_item") - F("discount_amount")) * F("quantity"),
+            output_field=DecimalField(max_digits=18, decimal_places=PRICE_DECIMAL_PLACES),
+        )
+        items_total = (
+            OrderItem.objects.filter(order__order_date__date__range=[start_date, end_date])
+            .aggregate(total=Sum(item_revenue_expr))
+            .get("total")
+            or Decimal("0.00")
+        )
+
+        # Printing and Boxing charges
+        printing_total = (
+            PrintingJob.objects.filter(order_item__order__order_date__date__range=[start_date, end_date])
+            .aggregate(total=Sum("total_printing_cost"))
+            .get("total")
+            or Decimal("0.00")
+        )
+        boxing_total = (
+            BoxOrder.objects.filter(order_item__order__order_date__date__range=[start_date, end_date])
+            .aggregate(total=Sum("total_box_cost"))
+            .get("total")
+            or Decimal("0.00")
+        )
+
+        # Service items revenue
+        services_total = (
+            ServiceOrderItem.objects.filter(order__order_date__date__range=[start_date, end_date])
+            .aggregate(total=Sum("total_cost"))
+            .get("total")
+            or Decimal("0.00")
+        )
+
+        return items_total + printing_total + boxing_total + services_total
+
+    @staticmethod
+    def get_monthly_total_sale():
+        """
+        Returns gross sales (pre-tax) for the current calendar month.
+        """
+        today = timezone.now().date()
+        start_of_month = today.replace(day=1)
+        next_month_start = (start_of_month.replace(day=28) + timedelta(days=4)).replace(day=1)
+        end_of_month = next_month_start - timedelta(days=1)
+        return AnalyticsService._calculate_sales_for_period(start_of_month, end_of_month)
+
+    @staticmethod
+    def get_yearly_sale_analysis():
+        """
+        Calculates gross sales (pre-tax) for each of the last 12 months.
+        """
+        today = timezone.now().date()
+        yearly_data = []
+        for i in range(12):
+            month_date = today - relativedelta(months=i)
+            start_of_month = month_date.replace(day=1)
+            next_month_start = (start_of_month.replace(day=28) + timedelta(days=4)).replace(day=1)
+            end_of_month = next_month_start - timedelta(days=1)
+
+            sales_total = AnalyticsService._calculate_sales_for_period(start_of_month, end_of_month)
+            yearly_data.append({"month": start_of_month.strftime("%Y-%m"), "sale": f"{sales_total:.2f}"})
+
+        return yearly_data[::-1]
 
     @staticmethod
     def get_pending_production_counts():
