@@ -8,6 +8,8 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_backup_common.sh"
 
 SNAP_ID="${1:-latest}"
 
+export SNAP_ID
+
 with_lock "verify" bash -c '
   check_host_deps
   if [[ "${SNAP_ID}" == "latest" ]]; then
@@ -36,7 +38,8 @@ PY
     if docker exec "${cname}" pg_isready -U "${dbuser}" -d "${dbname}" >/dev/null 2>&1; then break; fi; sleep 1; done
 
   log "Restoring db.dump into temp container"
-  if ! pg_restore --clean --if-exists -h 127.0.0.1 -p "${port}" -U "${dbuser}" -d "${dbname}" "${snap_dir}/db.dump"; then
+  # Exec pg_restore inside the same postgres container with password to avoid host networking issues
+  if ! cat "${snap_dir}/db.dump" | docker exec -i -e PGPASSWORD="testpass" "${cname}" pg_restore --clean --if-exists -U "${dbuser}" -d "${dbname}"; then
     warn "pg_restore failed"
     docker rm -f "${cname}" >/dev/null 2>&1 || true
     exit 2

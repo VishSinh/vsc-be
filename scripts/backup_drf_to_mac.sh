@@ -98,11 +98,17 @@ main() {
       done
     )
 
-    # 7) Quick validation of db.dump
-    if command -v pg_restore >/dev/null 2>&1; then
-      pg_restore -l "${snap_dir}/db.dump" >/dev/null
+    # 7) Quick validation of db.dump (prefer containerized pg_restore to avoid version mismatch)
+    if command -v docker >/dev/null 2>&1; then
+      if ! docker run --rm -i postgres:16 pg_restore -l < "${snap_dir}/db.dump" >/dev/null 2>&1; then
+        warn "Quick validation via containerized pg_restore failed (possibly corrupted or incompatible dump). Proceeding."
+      fi
+    elif command -v pg_restore >/dev/null 2>&1; then
+      if ! pg_restore -l "${snap_dir}/db.dump" >/dev/null 2>&1; then
+        warn "Quick validation via host pg_restore failed. Proceeding."
+      fi
     else
-      warn "pg_restore not found on host; skipping quick validation"
+      warn "Neither docker nor pg_restore found on host; skipping quick validation"
     fi
 
     # 8) Update latest symlink
