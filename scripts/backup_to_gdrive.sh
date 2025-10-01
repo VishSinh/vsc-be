@@ -52,17 +52,49 @@ local_pg_db() {
   local compose
   compose=$(local_compose_cmd)
   # shellcheck disable=SC2016
-  ${compose} exec -T ${PG_SERVICE} sh -lc 'printenv POSTGRES_DB || printenv PGDATABASE' 2>/dev/null | tr -d "\r"
+  local val
+  val=$(${compose} exec -T ${PG_SERVICE} sh -lc 'printenv POSTGRES_DB || printenv PGDATABASE' 2>/dev/null | tr -d "\r" || true)
+  if [[ -z "${val}" ]]; then
+    # Fallback to .env DB_NAME
+    val=$(dotenv_value DB_NAME || true)
+  fi
+  echo -n "${val}"
 }
 
 local_pg_user() {
   local compose
   compose=$(local_compose_cmd)
   # shellcheck disable=SC2016
-  ${compose} exec -T ${PG_SERVICE} sh -lc 'printenv POSTGRES_USER || printenv PGUSER' 2>/dev/null | tr -d "\r"
+  local val
+  val=$(${compose} exec -T ${PG_SERVICE} sh -lc 'printenv POSTGRES_USER || printenv PGUSER' 2>/dev/null | tr -d "\r" || true)
+  if [[ -z "${val}" ]]; then
+    # Fallback to .env DB_USER
+    val=$(dotenv_value DB_USER || true)
+  fi
+  echo -n "${val}"
 }
 
-export -f local_compose_cmd local_pg_db local_pg_user
+dotenv_value() {
+  local key="$1"
+  local file="${REMOTE_PROJECT_DIR:-}/.env"
+  if [[ -f "${file}" ]]; then
+    local line
+    line=$(grep -E "^[[:space:]]*${key}=" "${file}" | tail -n1 || true)
+    if [[ -n "${line}" ]]; then
+      local val
+      val="${line#*=}"
+      val="${val%$'\r'}"
+      # strip surrounding quotes if present
+      val="${val%\"}"; val="${val#\"}"
+      val="${val%\'}"; val="${val#\'}"
+      echo -n "${val}"
+      return 0
+    fi
+  fi
+  return 1
+}
+
+export -f local_compose_cmd local_pg_db local_pg_user dotenv_value
 
 main() {
   with_lock "gdrive-backup" bash -c '
@@ -105,6 +137,7 @@ main() {
     PG_DB_RESOLVED="$(local_pg_db)"; PG_USER_RESOLVED="$(local_pg_user)"
     [[ -n "${PG_DB_RESOLVED}" ]] || die "Unable to resolve PG_DB"
     [[ -n "${PG_USER_RESOLVED}" ]] || die "Unable to resolve PG_USER"
+    log "Resolved DB: name=${PG_DB_RESOLVED} user=${PG_USER_RESOLVED}"
     log "Dumping Postgres database ${PG_DB_RESOLVED} from service ${PG_SERVICE}"
     ${compose} exec -T ${PG_SERVICE} pg_dump -U ${PG_USER_RESOLVED} -d ${PG_DB_RESOLVED} -Fc > "${snap_dir}/db.dump"
 
