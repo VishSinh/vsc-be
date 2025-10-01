@@ -173,16 +173,16 @@ main() {
       out_file="${snap_dir}/media.tar.gz"
       if docker volume inspect ${MEDIA_VOLUME_NAME} >/dev/null 2>&1; then
         if [[ "${DRY_RUN:-0}" = "1" ]]; then
-          echo "[DRY_RUN] docker run --rm -v ${MEDIA_VOLUME_NAME}:/data alpine sh -c 'cd /data && tar -cz .' > ${out_file}"
+          echo "[DRY_RUN] docker run --rm -v ${MEDIA_VOLUME_NAME}:/data busybox tar -C /data -czf - . > ${out_file}"
         else
-          docker run --rm -v ${MEDIA_VOLUME_NAME}:/data alpine sh -c "cd /data && tar -cz ." > "${out_file}"
+          docker run --rm -v ${MEDIA_VOLUME_NAME}:/data busybox tar -C /data -czf - . > "${out_file}"
         fi
       else
         warn "Volume ${MEDIA_VOLUME_NAME} not found, falling back to web container mount at ${MEDIA_MOUNT_PATH_IN_WEB}"
         if [[ "${DRY_RUN:-0}" = "1" ]]; then
-          echo "[DRY_RUN] ${compose} exec -T web tar -cz -C ${MEDIA_MOUNT_PATH_IN_WEB} . > ${out_file}"
+          echo "[DRY_RUN] ${compose} exec -T web sh -lc 'tar -C ${MEDIA_MOUNT_PATH_IN_WEB} -czf - .' > ${out_file}"
         else
-          ${compose} exec -T web tar -cz -C ${MEDIA_MOUNT_PATH_IN_WEB} . > "${out_file}"
+          ${compose} exec -T web sh -lc "tar -C ${MEDIA_MOUNT_PATH_IN_WEB} -czf - ." > "${out_file}"
         fi
       fi
     fi
