@@ -39,10 +39,12 @@ done
 local_compose_cmd() {
   local proj="${REMOTE_PROJECT_DIR:?REMOTE_PROJECT_DIR not set}"
   local file="${COMPOSE_FILE:?COMPOSE_FILE not set}"
+  local abs_file
+  abs_file="${proj%/}/${file}"
   if docker compose version >/dev/null 2>&1; then
-    echo "cd ${proj} && docker compose -f ${file}"
+    echo "docker compose -f ${abs_file}"
   elif command -v docker-compose >/dev/null 2>&1; then
-    echo "cd ${proj} && docker-compose -f ${file}"
+    echo "docker-compose -f ${abs_file}"
   else
     die "Neither 'docker compose' nor 'docker-compose' found on server"
   fi
@@ -139,16 +141,16 @@ main() {
     [[ -n "${PG_USER_RESOLVED}" ]] || die "Unable to resolve PG_USER"
     log "Resolved DB: name=${PG_DB_RESOLVED} user=${PG_USER_RESOLVED}"
     log "Dumping Postgres database ${PG_DB_RESOLVED} from service ${PG_SERVICE}"
-    ${compose} exec -T ${PG_SERVICE} pg_dump -U ${PG_USER_RESOLVED} -d ${PG_DB_RESOLVED} -Fc > "${snap_dir}/db.dump"
+    ${compose} exec -T ${PG_SERVICE} sh -lc "pg_dump -U ${PG_USER_RESOLVED} -d ${PG_DB_RESOLVED} -Fc" > "${snap_dir}/db.dump"
 
     # 2) Schema-only
     log "Dumping schema-only"
-    ${compose} exec -T ${PG_SERVICE} pg_dump -U ${PG_USER_RESOLVED} -d ${PG_DB_RESOLVED} --schema-only > "${snap_dir}/schema.sql"
+    ${compose} exec -T ${PG_SERVICE} sh -lc "pg_dump -U ${PG_USER_RESOLVED} -d ${PG_DB_RESOLVED} --schema-only" > "${snap_dir}/schema.sql"
 
     # 3) Roles (best effort)
-    if ${compose} exec -T ${PG_SERVICE} sh -lc "command -v pg_dumpall >/dev/null" >/dev/null 2>&1; then
+    if ${compose} exec -T ${PG_SERVICE} sh -lc 'command -v pg_dumpall >/dev/null' >/dev/null 2>&1; then
       log "Dumping roles (best effort)"
-      if ${compose} exec -T ${PG_SERVICE} pg_dumpall --roles-only -U ${PG_USER_RESOLVED} > "${snap_dir}/roles.sql"; then
+      if ${compose} exec -T ${PG_SERVICE} sh -lc "pg_dumpall --roles-only -U ${PG_USER_RESOLVED}" > "${snap_dir}/roles.sql"; then
         :
       else
         warn "Roles dump failed; continuing without roles.sql"
