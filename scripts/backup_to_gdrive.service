@@ -8,7 +8,7 @@ Type=oneshot
 User=root
 Group=root
 Environment=BACKUP_ENV=/etc/app-backup.env
-Environment=RCLONE_CONFIG_FILE=/etc/rclone/rclone.conf
+Environment=RCLONE_CONFIG_FILE=/var/lib/rclone/rclone.conf
 Environment="RCLONE_REMOTE=VSC GDrive"
 ExecStart=/usr/bin/env bash -lc '/usr/local/bin/backup_to_gdrive.sh'
 Nice=10
@@ -22,7 +22,9 @@ NoNewPrivileges=true
 PrivateTmp=true
 PrivateDevices=true
 ReadWritePaths=/var/backups/app
+ReadWritePaths=/var/lib/rclone
 ReadOnlyPaths=/etc
+StateDirectory=rclone
 RuntimeMaxSec=7200
 TimeoutStartSec=7200
 LogsDirectory=app-backup
