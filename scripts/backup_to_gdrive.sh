@@ -148,7 +148,7 @@ main() {
     ${compose} exec -T ${PG_SERVICE} sh -lc "pg_dump -U ${PG_USER_RESOLVED} -d ${PG_DB_RESOLVED} --schema-only" > "${snap_dir}/schema.sql"
 
     # 3) Roles (best effort)
-    if ${compose} exec -T ${PG_SERVICE} sh -lc 'command -v pg_dumpall >/dev/null 2>&1'; then
+    if ${compose} exec -T ${PG_SERVICE} sh -lc "command -v pg_dumpall >/dev/null 2>&1"; then
       log "Dumping roles (best effort)"
       if ${compose} exec -T ${PG_SERVICE} sh -lc "pg_dumpall --roles-only -U ${PG_USER_RESOLVED}" > "${snap_dir}/roles.sql"; then
         :
@@ -175,14 +175,14 @@ main() {
       out_file="${snap_dir}/media.tar.gz"
       if docker volume inspect ${MEDIA_VOLUME_NAME} >/dev/null 2>&1; then
         if [[ "${DRY_RUN:-0}" = "1" ]]; then
-          log "DRY_RUN: docker run --rm -v ${MEDIA_VOLUME_NAME}:/data busybox tar -C /data -czf - . > ${out_file}"
+          log "DRY_RUN: would archive docker volume ${MEDIA_VOLUME_NAME} into ${out_file}"
         else
           docker run --rm -v ${MEDIA_VOLUME_NAME}:/data busybox tar -C /data -czf - . > "${out_file}"
         fi
       else
         warn "Volume ${MEDIA_VOLUME_NAME} not found, falling back to web container mount at ${MEDIA_MOUNT_PATH_IN_WEB}"
         if [[ "${DRY_RUN:-0}" = "1" ]]; then
-          log "DRY_RUN: ${compose} exec -T web sh -lc 'tar -C ${MEDIA_MOUNT_PATH_IN_WEB} -czf - .' > ${out_file}"
+          log "DRY_RUN: would archive container path ${MEDIA_MOUNT_PATH_IN_WEB} into ${out_file}"
         else
           ${compose} exec -T web sh -lc "tar -C ${MEDIA_MOUNT_PATH_IN_WEB} -czf - ." > "${out_file}"
         fi
