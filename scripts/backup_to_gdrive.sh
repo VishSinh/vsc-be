@@ -9,8 +9,60 @@ IFS=$'\n\t'
 # - Prunes remote snapshots to retain last 5 copies
 
 SCRIPT_BASENAME="gdrive-backup"
-# shellcheck disable=SC1091
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_backup_common.sh"
+
+# Try to source environment early so we can locate _backup_common.sh via REMOTE_PROJECT_DIR
+if [[ -n "${BACKUP_ENV:-}" && -f "${BACKUP_ENV}" ]]; then
+  # shellcheck disable=SC1090
+  source "${BACKUP_ENV}"
+fi
+
+# Robustly locate and source _backup_common.sh
+__fatal() { echo "[ERROR] $*" >&2; exit 1; }
+_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_candidates=(
+  "${_script_dir}/_backup_common.sh"
+  "${REMOTE_PROJECT_DIR:-}/scripts/_backup_common.sh"
+  "/usr/local/bin/_backup_common.sh"
+)
+_common_sourced=0
+for _c in "${_candidates[@]}"; do
+  if [[ -f "${_c}" ]]; then
+    # shellcheck disable=SC1090
+    source "${_c}"
+    _common_sourced=1
+    break
+  fi
+done
+[[ ${_common_sourced} -eq 1 ]] || __fatal "Could not locate _backup_common.sh in: ${_candidates[*]}"
+
+# Local compose helpers (server-side)
+local_compose_cmd() {
+  local proj="${REMOTE_PROJECT_DIR:?REMOTE_PROJECT_DIR not set}"
+  local file="${COMPOSE_FILE:?COMPOSE_FILE not set}"
+  if docker compose version >/dev/null 2>&1; then
+    echo "cd ${proj} && docker compose -f ${file}"
+  elif command -v docker-compose >/dev/null 2>&1; then
+    echo "cd ${proj} && docker-compose -f ${file}"
+  else
+    die "Neither 'docker compose' nor 'docker-compose' found on server"
+  fi
+}
+
+local_pg_db() {
+  local compose
+  compose=$(local_compose_cmd)
+  # shellcheck disable=SC2016
+  ${compose} exec -T ${PG_SERVICE} sh -lc 'printenv POSTGRES_DB || printenv PGDATABASE' 2>/dev/null | tr -d "\r"
+}
+
+local_pg_user() {
+  local compose
+  compose=$(local_compose_cmd)
+  # shellcheck disable=SC2016
+  ${compose} exec -T ${PG_SERVICE} sh -lc 'printenv POSTGRES_USER || printenv PGUSER' 2>/dev/null | tr -d "\r"
+}
+
+export -f local_compose_cmd local_pg_db local_pg_user
 
 main() {
   with_lock "gdrive-backup" bash -c '
@@ -45,25 +97,25 @@ main() {
     mkdir -p "${snap_dir}"
     log "Starting remote snapshot ${ts} -> ${snap_dir}"
 
-    compose=$(remote_compose_cmd)
+    compose=$(local_compose_cmd)
     mode=$(resolve_media_mode)
-    gitrev=$(remote_git_rev || true)
+    gitrev=$(git -C "${REMOTE_PROJECT_DIR}" rev-parse --short HEAD 2>/dev/null || true)
 
     # 1) DB dump (custom format)
-    PG_DB_RESOLVED="$(resolve_pg_db)"; PG_USER_RESOLVED="$(resolve_pg_user)"
+    PG_DB_RESOLVED="$(local_pg_db)"; PG_USER_RESOLVED="$(local_pg_user)"
     [[ -n "${PG_DB_RESOLVED}" ]] || die "Unable to resolve PG_DB"
     [[ -n "${PG_USER_RESOLVED}" ]] || die "Unable to resolve PG_USER"
     log "Dumping Postgres database ${PG_DB_RESOLVED} from service ${PG_SERVICE}"
-    ssh_exec "${compose} exec -T ${PG_SERVICE} pg_dump -U ${PG_USER_RESOLVED} -d ${PG_DB_RESOLVED} -Fc" > "${snap_dir}/db.dump"
+    ${compose} exec -T ${PG_SERVICE} pg_dump -U ${PG_USER_RESOLVED} -d ${PG_DB_RESOLVED} -Fc > "${snap_dir}/db.dump"
 
     # 2) Schema-only
     log "Dumping schema-only"
-    ssh_exec "${compose} exec -T ${PG_SERVICE} pg_dump -U ${PG_USER_RESOLVED} -d ${PG_DB_RESOLVED} --schema-only" > "${snap_dir}/schema.sql"
+    ${compose} exec -T ${PG_SERVICE} pg_dump -U ${PG_USER_RESOLVED} -d ${PG_DB_RESOLVED} --schema-only > "${snap_dir}/schema.sql"
 
     # 3) Roles (best effort)
-    if ssh_exec "${compose} exec -T ${PG_SERVICE} sh -lc \"command -v pg_dumpall >/dev/null\"" >/dev/null 2>&1; then
+    if ${compose} exec -T ${PG_SERVICE} sh -lc "command -v pg_dumpall >/dev/null" >/dev/null 2>&1; then
       log "Dumping roles (best effort)"
-      if ssh_exec "${compose} exec -T ${PG_SERVICE} pg_dumpall --roles-only -U ${PG_USER_RESOLVED}" > "${snap_dir}/roles.sql"; then
+      if ${compose} exec -T ${PG_SERVICE} pg_dumpall --roles-only -U ${PG_USER_RESOLVED} > "${snap_dir}/roles.sql"; then
         :
       else
         warn "Roles dump failed; continuing without roles.sql"
@@ -80,24 +132,24 @@ main() {
       linkdest=""
       if [[ -d "${BACKUP_ROOT}/latest/media" ]]; then linkdest="--link-dest=${BACKUP_ROOT}/latest/media"; fi
       rsync_opts=("-aH" "--delete" "--numeric-ids" "--partial" "--info=stats2,progress2")
-      src="${SSH_USER}@${SSH_HOST}:${MEDIA_BIND_HOST_PATH%/}/"
+      src="${MEDIA_BIND_HOST_PATH%/}/"
       if [[ "${DRY_RUN:-0}" = "1" ]]; then rsync_opts+=("--dry-run"); fi
-      run_rsync ${SSH_OPTS:-} "${rsync_opts[@]}" ${linkdest:+"${linkdest}"} "${src}" "${snap_dir}/media/"
+      run_rsync "${rsync_opts[@]}" ${linkdest:+"${linkdest}"} "${src}" "${snap_dir}/media/"
     else
       log "Media mode: volume-tar from docker volume ${MEDIA_VOLUME_NAME} -> media.tar.gz"
       out_file="${snap_dir}/media.tar.gz"
-      if remote_docker "volume inspect ${MEDIA_VOLUME_NAME} >/dev/null 2>&1"; then
+      if docker volume inspect ${MEDIA_VOLUME_NAME} >/dev/null 2>&1; then
         if [[ "${DRY_RUN:-0}" = "1" ]]; then
-          echo "[DRY_RUN] ssh ${SSH_USER}@${SSH_HOST} $(remote_docker_cmd) run --rm -v ${MEDIA_VOLUME_NAME}:/data alpine sh -c \"cd /data && tar -cz .\" > ${out_file}"
+          echo "[DRY_RUN] docker run --rm -v ${MEDIA_VOLUME_NAME}:/data alpine sh -c 'cd /data && tar -cz .' > ${out_file}"
         else
-          ssh_exec "$(remote_docker_cmd) run --rm -v ${MEDIA_VOLUME_NAME}:/data alpine sh -c \"cd /data && tar -cz .\"" > "${out_file}"
+          docker run --rm -v ${MEDIA_VOLUME_NAME}:/data alpine sh -c "cd /data && tar -cz ." > "${out_file}"
         fi
       else
         warn "Volume ${MEDIA_VOLUME_NAME} not found, falling back to web container mount at ${MEDIA_MOUNT_PATH_IN_WEB}"
         if [[ "${DRY_RUN:-0}" = "1" ]]; then
-          echo "[DRY_RUN] ssh ${SSH_USER}@${SSH_HOST} ${compose} exec -T web tar -cz -C ${MEDIA_MOUNT_PATH_IN_WEB} . > ${out_file}"
+          echo "[DRY_RUN] ${compose} exec -T web tar -cz -C ${MEDIA_MOUNT_PATH_IN_WEB} . > ${out_file}"
         else
-          ssh_exec "${compose} exec -T web tar -cz -C ${MEDIA_MOUNT_PATH_IN_WEB} ." > "${out_file}"
+          ${compose} exec -T web tar -cz -C ${MEDIA_MOUNT_PATH_IN_WEB} . > "${out_file}"
         fi
       fi
     fi
@@ -106,7 +158,7 @@ main() {
     manifest="${snap_dir}/manifest.json"
     write_manifest "${manifest}" \
       TS="${ts}" \
-      SSH_HOST="${SSH_HOST}" \
+      HOSTNAME="${HOSTNAME:-}" \
       COMPOSE_FILE="${COMPOSE_FILE}" \
       COMPOSE_CMD="${compose}" \
       PG_SERVICE="${PG_SERVICE}" \
