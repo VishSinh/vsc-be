@@ -1,0 +1,35 @@
+[Unit]
+Description=App backup to Google Drive via rclone
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+Environment=BACKUP_ENV=/etc/app-backup.env
+Environment=RCLONE_CONFIG_FILE=/etc/rclone/rclone.conf
+Environment=RCLONE_REMOTE=gdrive
+ExecStart=/usr/bin/env bash -lc '/usr/local/bin/backup_to_gdrive.sh'
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+CPUSchedulingPolicy=batch
+CPUWeight=200
+ProtectHome=true
+ProtectSystem=full
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ReadWritePaths=/var/backups/app
+ReadOnlyPaths=/etc
+RuntimeMaxSec=7200
+TimeoutStartSec=7200
+LogsDirectory=app-backup
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
+
