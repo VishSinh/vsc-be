@@ -64,7 +64,7 @@ class CardView(APIView):
         cards = CardService.get_cards()
 
         helper = QueryFilterSortHelper(
-            allowed_filter_fields=["quantity", "cost_price"],
+            allowed_filter_fields=["quantity", "cost_price", "card_type"],
             allowed_sort_fields=["created_at", "cost_price", "quantity"],
             default_sort_by="created_at",
             default_sort_order="desc",
@@ -97,6 +97,7 @@ class CardView(APIView):
             max_discount=body.get_value("max_discount"),
             quantity=body.get_value("quantity"),
             perceptual_hash=perceptual_hash,
+            card_type=body.get_value("card_type"),
         )
 
         to_return = model_unwrap(card)

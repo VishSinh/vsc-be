@@ -12,6 +12,7 @@ from core.constants import (
     PRICE_DECIMAL_PLACES,
     PRICE_MAX_DIGITS,
     STATUS_LENGTH,
+    CARD_TYPE_LENGTH,
     TAX_DECIMAL_PLACES,
     TAX_MAX_DIGITS,
     TEXT_LENGTH,
@@ -40,9 +41,29 @@ class Vendor(models.Model):
 class Card(models.Model):
     """Main product catalog with pricing and inventory"""
 
+    class CardType(models.TextChoices):
+        SINGLE = "SINGLE", "Single"
+        BIRTHDAY = "BIRTHDAY", "Birthday"
+        MUNDAN = "MUNDAN", "Mundan"
+        CARRY_BAG = "CARRY_BAG", "CarryBag"
+        THREE_FOLD = "THREE_FOLD", "ThreeFold"
+        FIVE_FOLD = "FIVE_FOLD", "FiveFold"
+        ENVELOPE_11X5 = "ENVELOPE_11X5", "Envelope11x5"
+        ENVELOPE_9X7 = "ENVELOPE_9X7", "Envelope9x7"
+        JUMBO = "JUMBO", "Jumbo"
+        BOX = "BOX", "Box"
+        PADDING = "PADDING", "Padding"
+        URDU_ENVELOPE_11X5 = "URDU_ENVELOPE_11X5", "UrduEnvelope11x5"
+        URDU_ENVELOPE_9X7 = "URDU_ENVELOPE_9X7", "UrduEnvelope9x7"
+        URDU_CARRY_BAG = "URDU_CARRY_BAG", "UrduCarryBag"
+        URDU_JUMBO = "URDU_JUMBO", "UrduJumbo"
+        URDU_BOX = "URDU_BOX", "UrduBox"
+        URDU_PADDING = "URDU_PADDING", "UrduPadding"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="cards")
     barcode = models.CharField(max_length=TEXT_LENGTH, unique=True)
+    card_type = models.CharField(max_length=CARD_TYPE_LENGTH, choices=CardType.choices, default=CardType.ENVELOPE_11X5, db_index=True)
     sell_price = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES)
     cost_price = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES)
     max_discount = models.DecimalField(

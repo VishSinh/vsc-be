@@ -6,6 +6,7 @@ LONG_TEXT_LENGTH = 500
 
 # Status field lengths (all status fields use similar lengths)
 STATUS_LENGTH = 11  # For most status fields
+CARD_TYPE_LENGTH = 32  # Max length for inventory Card.card_type values
 SHORT_STATUS_LENGTH = 9  # For payment status
 PAYMENT_MODE_LENGTH = 4
 BOX_TYPE_LENGTH = 8

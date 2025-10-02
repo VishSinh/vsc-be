@@ -28,7 +28,7 @@ class CardService:
 
     @staticmethod
     @transaction.atomic
-    def create_card(vendor_id, staff, image_url, cost_price, sell_price, max_discount, quantity, perceptual_hash):
+    def create_card(vendor_id, staff, image_url, cost_price, sell_price, max_discount, quantity, perceptual_hash, card_type=None):
         # 1. Generate unique identifiers
         barcode = ImageUtils.generate_unique_barcode(Card)
 
@@ -44,6 +44,7 @@ class CardService:
             quantity=quantity,
             barcode=barcode,
             perceptual_hash=perceptual_hash,
+            card_type=card_type if card_type else Card.CardType.ENVELOPE_11X5,
         )
 
         # 3. Create the initial inventory transaction to log the purchase

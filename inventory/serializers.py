@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from core.constants import NAME_LENGTH, PAGINATION_DEFAULT_PAGE, PAGINATION_DEFAULT_PAGE_SIZE, PHONE_LENGTH, PRICE_DECIMAL_PLACES, PRICE_MAX_DIGITS
+from inventory.models import Card
 from core.helpers.base_serializer import BaseSerializer
 from core.helpers.param_serializer import ParamSerializer
 from core.helpers.query_params import BaseListParams, build_range_fields
@@ -15,6 +16,7 @@ class VendorQueryParams(BaseListParams):
 
 class CardQueryParams(BaseListParams):
     barcode = serializers.CharField(required=False)
+    card_type = serializers.ChoiceField(required=False, choices=Card.CardType.choices)
     # Filters
     quantity = serializers.IntegerField(required=False, min_value=0)
     cost_price = serializers.DecimalField(required=False, max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES, min_value=0)
@@ -41,6 +43,7 @@ class VendorSerializer(BaseSerializer):
 
 class CardSerializer(BaseSerializer):
     image = serializers.ImageField(required=True)
+    card_type = serializers.ChoiceField(required=False, choices=Card.CardType.choices, default=Card.CardType.ENVELOPE_11X5)
     cost_price = serializers.DecimalField(
         required=True,
         max_digits=PRICE_MAX_DIGITS,
@@ -65,6 +68,7 @@ class CardSerializer(BaseSerializer):
 
 class CardUpdateSerializer(BaseSerializer):
     image = serializers.ImageField(required=False)
+    card_type = serializers.ChoiceField(required=False, choices=Card.CardType.choices)
     cost_price = serializers.DecimalField(required=False, max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES, min_value=0)
     sell_price = serializers.DecimalField(required=False, max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES, min_value=0)
     max_discount = serializers.DecimalField(required=False, max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES, min_value=0)
