@@ -1,6 +1,13 @@
 from rest_framework.views import APIView
 
-from accounts.serializers import CustomerCreateSerializer, CustomerQueryParams, LoginSerializer, RegisterSerializer, StaffQueryParams
+from accounts.serializers import (
+    CustomerCreateSerializer,
+    CustomerQueryParams,
+    CustomerUpdateSerializer,
+    LoginSerializer,
+    RegisterSerializer,
+    StaffQueryParams,
+)
 from accounts.services import CustomerService, StaffService
 from core.authorization import AuthorizationService, Permission, require_permission
 from core.decorators import forge
@@ -45,8 +52,14 @@ class CustomerView(APIView):
             return model_unwrap(customer)
 
         params = CustomerQueryParams.validate_params(request)
-        customer = CustomerService.get_customer_by_phone(params.get_value("phone"))
-        return model_unwrap(customer)
+
+        if params.get_value("phone"):
+            customer = CustomerService.get_customer_by_phone(params.get_value("phone"))
+            return model_unwrap(customer)
+
+        customers = CustomerService.get_all_customers()
+        customers, page_info = PaginationHelper.paginate_queryset(customers, params.get_value("page"), params.get_value("page_size"))
+        return [model_unwrap(customer) for customer in customers], page_info
 
     @forge
     @require_permission(Permission.CUSTOMER_CREATE)
@@ -56,6 +69,14 @@ class CustomerView(APIView):
         CustomerService.create_customer(name=body.get_value("name"), phone=body.get_value("phone"))
 
         return {"message": "Customer created successfully"}
+
+    @forge
+    @require_permission(Permission.CUSTOMER_UPDATE)
+    def patch(self, request, customer_id):
+        body = CustomerUpdateSerializer.validate_request(request)
+        customer = CustomerService.get_customer_by_id(customer_id)
+        updated_customer = CustomerService.update_customer(customer, name=body.get_value("name"), phone=body.get_value("phone"))
+        return model_unwrap(updated_customer)
 
 
 class PermissionsView(APIView):

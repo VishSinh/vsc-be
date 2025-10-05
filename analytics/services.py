@@ -3,12 +3,12 @@ from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta  # type: ignore
 from django.conf import settings
-from django.db.models import Q, Sum, Count, Max, Min, F, OuterRef, Subquery, DecimalField, ExpressionWrapper
+from django.db.models import Count, DecimalField, ExpressionWrapper, F, Max, Min, OuterRef, Q, Subquery, Sum
 from django.utils import timezone
 
-from inventory.models import Card, InventoryTransaction
-from orders.models import Bill, Order, OrderItem, BillAdjustment, ServiceOrderItem
 from core.constants import PRICE_DECIMAL_PLACES
+from inventory.models import Card, InventoryTransaction
+from orders.models import Bill, BillAdjustment, Order, OrderItem, ServiceOrderItem
 from orders.services import OrderService
 from production.models import BoxOrder, PrintingJob
 
@@ -84,11 +84,7 @@ class AnalyticsService:
         order_ids = [o.id for o in period_orders]
         adjustments_map: dict[str, Decimal] = {}
         if order_ids:
-            adj_rows = (
-                BillAdjustment.objects.filter(bill__order_id__in=order_ids)
-                .values("bill__order_id")
-                .annotate(total=Sum("amount"))
-            )
+            adj_rows = BillAdjustment.objects.filter(bill__order_id__in=order_ids).values("bill__order_id").annotate(total=Sum("amount"))
             for row in adj_rows:
                 adjustments_map[str(row["bill__order_id"])] = row["total"] or Decimal("0.0")
 
@@ -219,34 +215,22 @@ class AnalyticsService:
             (F("price_per_item") - F("discount_amount")) * F("quantity"),
             output_field=DecimalField(max_digits=18, decimal_places=PRICE_DECIMAL_PLACES),
         )
-        items_total = (
-            OrderItem.objects.filter(order__order_date__date__range=[start_date, end_date])
-            .aggregate(total=Sum(item_revenue_expr))
-            .get("total")
-            or Decimal("0.00")
-        )
+        items_total = OrderItem.objects.filter(order__order_date__date__range=[start_date, end_date]).aggregate(total=Sum(item_revenue_expr)).get(
+            "total"
+        ) or Decimal("0.00")
 
         # Printing and Boxing charges
-        printing_total = (
-            PrintingJob.objects.filter(order_item__order__order_date__date__range=[start_date, end_date])
-            .aggregate(total=Sum("total_printing_cost"))
-            .get("total")
-            or Decimal("0.00")
-        )
-        boxing_total = (
-            BoxOrder.objects.filter(order_item__order__order_date__date__range=[start_date, end_date])
-            .aggregate(total=Sum("total_box_cost"))
-            .get("total")
-            or Decimal("0.00")
-        )
+        printing_total = PrintingJob.objects.filter(order_item__order__order_date__date__range=[start_date, end_date]).aggregate(
+            total=Sum("total_printing_cost")
+        ).get("total") or Decimal("0.00")
+        boxing_total = BoxOrder.objects.filter(order_item__order__order_date__date__range=[start_date, end_date]).aggregate(
+            total=Sum("total_box_cost")
+        ).get("total") or Decimal("0.00")
 
         # Service items revenue
-        services_total = (
-            ServiceOrderItem.objects.filter(order__order_date__date__range=[start_date, end_date])
-            .aggregate(total=Sum("total_cost"))
-            .get("total")
-            or Decimal("0.00")
-        )
+        services_total = ServiceOrderItem.objects.filter(order__order_date__date__range=[start_date, end_date]).aggregate(
+            total=Sum("total_cost")
+        ).get("total") or Decimal("0.00")
 
         return items_total + printing_total + boxing_total + services_total
 
@@ -390,9 +374,7 @@ class CardAnalyticsService:
 
         # Subquery to reference the per-item sale cost price captured at the time of sale
         sale_cost_price_sq = Subquery(
-            InventoryTransaction.objects.filter(
-                order_item_id=OuterRef("pk"), transaction_type=InventoryTransaction.TransactionType.SALE
-            )
+            InventoryTransaction.objects.filter(order_item_id=OuterRef("pk"), transaction_type=InventoryTransaction.TransactionType.SALE)
             .order_by("-created_at")
             .values("cost_price")[:1]
         )
@@ -442,30 +424,19 @@ class CardAnalyticsService:
         avg_discount_rate = (discount_total / price_total) if price_total > 0 else Decimal("0.00")
 
         # Returns info (quantity_changed is positive for RETURN)
-        return_data = InventoryTransaction.objects.filter(
-            card_id=card_id, transaction_type=InventoryTransaction.TransactionType.RETURN
-        ).aggregate(transactions=Count("id"), units=Sum("quantity_changed"))
+        return_data = InventoryTransaction.objects.filter(card_id=card_id, transaction_type=InventoryTransaction.TransactionType.RETURN).aggregate(
+            transactions=Count("id"), units=Sum("quantity_changed")
+        )
 
         # Order status breakdown (distinct orders per status)
-        status_qs = (
-            order_items_qs.values("order__order_status")
-            .annotate(order_count=Count("order_id", distinct=True))
-            .order_by()
-        )
+        status_qs = order_items_qs.values("order__order_status").annotate(order_count=Count("order_id", distinct=True)).order_by()
         status_breakdown: dict[str, int] = {}
         for row in status_qs:
             status_breakdown[row["order__order_status"]] = row["order_count"]
 
         # Orders list: one row per order (name and quantity of this card in that order)
-        orders_qs = (
-            order_items_qs.values("order_id", "order__name")
-            .annotate(quantity=Sum("quantity"))
-            .order_by("-order__order_date")
-        )
-        orders_list = [
-            {"order_id": row["order_id"], "name": row["order__name"], "quantity": row["quantity"] or 0}
-            for row in orders_qs
-        ]
+        orders_qs = order_items_qs.values("order_id", "order__name").annotate(quantity=Sum("quantity")).order_by("-order__order_date")
+        orders_list = [{"order_id": row["order_id"], "name": row["order__name"], "quantity": row["quantity"] or 0} for row in orders_qs]
 
         return {
             "orders_count": aggregates.get("orders_count") or 0,

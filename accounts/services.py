@@ -98,5 +98,18 @@ class CustomerService:
         return customer
 
     @staticmethod
+    def get_all_customers():
+        return Customer.objects.filter(is_active=True).order_by("-created_at")
+
+    @staticmethod
     def check_customer_exists_by_phone(phone):
         return Customer.objects.filter(phone=phone, is_active=True).exists()
+
+    @staticmethod
+    def update_customer(customer: Customer, name, phone):
+        if name:
+            customer.name = name
+        if phone:
+            customer.phone = phone
+        customer.save()
+        return customer

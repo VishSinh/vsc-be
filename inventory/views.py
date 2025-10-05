@@ -1,8 +1,9 @@
 from rest_framework.views import APIView
 
+from analytics.services import CardAnalyticsService
 from core.authorization import Permission, require_permission
 from core.decorators import forge
-from core.exceptions import BadRequest
+from core.exceptions import BadRequest, Unauthorized
 from core.helpers.image_upload import ImageUpload
 from core.helpers.image_utils import ImageUtils
 from core.helpers.pagination import PaginationHelper
@@ -18,7 +19,6 @@ from inventory.serializers import (
     VendorSerializer,
 )
 from inventory.services import CardService, VendorService
-from analytics.services import CardAnalyticsService
 
 
 class VendorView(APIView):
@@ -131,7 +131,7 @@ class CardDetailView(APIView):
     def get(self, request, card_id):
 
         stats = CardAnalyticsService.get_card_stats(card_id)
-  
+
         return stats
 
 

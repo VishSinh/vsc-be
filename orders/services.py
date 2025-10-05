@@ -626,6 +626,7 @@ class BillAdjustmentService:
         )
         return adjustment
 
+
 class ServiceOrderItemService:
     @staticmethod
     def create_service_item(

@@ -1,10 +1,10 @@
 from rest_framework import serializers
 
 from core.constants import NAME_LENGTH, PAGINATION_DEFAULT_PAGE, PAGINATION_DEFAULT_PAGE_SIZE, PHONE_LENGTH, PRICE_DECIMAL_PLACES, PRICE_MAX_DIGITS
-from inventory.models import Card
 from core.helpers.base_serializer import BaseSerializer
 from core.helpers.param_serializer import ParamSerializer
 from core.helpers.query_params import BaseListParams, build_range_fields
+from inventory.models import Card
 
 
 # ================================================

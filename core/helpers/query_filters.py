@@ -1,4 +1,4 @@
-from typing import Iterable, Mapping, Sequence, Union, Optional, Dict, Callable
+from typing import Callable, Dict, Iterable, Mapping, Optional, Sequence, Union
 
 
 class QueryFilterSortHelper:
@@ -85,5 +85,3 @@ class QueryFilterSortHelper:
             return params
         # Fallback: try to access as mapping-like
         return getattr(params, "__dict__", {})
-
-

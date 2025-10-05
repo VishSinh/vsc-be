@@ -73,5 +73,3 @@ def build_date_fields(
         for suffix in tuple(lookups):
             fields[f"{field}{suffix}"] = serializers.DateField(required=False)
     return fields
-
-

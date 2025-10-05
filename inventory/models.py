@@ -4,6 +4,7 @@ from django.db import models
 
 from accounts.models import Staff
 from core.constants import (
+    CARD_TYPE_LENGTH,
     DEFAULT_AMOUNT,
     DEFAULT_QUANTITY,
     LONG_TEXT_LENGTH,
@@ -12,7 +13,6 @@ from core.constants import (
     PRICE_DECIMAL_PLACES,
     PRICE_MAX_DIGITS,
     STATUS_LENGTH,
-    CARD_TYPE_LENGTH,
     TAX_DECIMAL_PLACES,
     TAX_MAX_DIGITS,
     TEXT_LENGTH,

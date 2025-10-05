@@ -11,10 +11,11 @@ from core.constants import (
 )
 from core.helpers.base_serializer import BaseSerializer
 from core.helpers.param_serializer import ParamSerializer
+from core.helpers.query_params import BaseListParams
 
 
 # Parameter Serializers
-class CustomerQueryParams(ParamSerializer):
+class CustomerQueryParams(BaseListParams):
     phone = serializers.CharField(required=False, min_length=SERIALIZER_MIN_PHONE_LENGTH, max_length=SERIALIZER_MAX_PHONE_LENGTH)
 
 
@@ -39,3 +40,8 @@ class LoginSerializer(BaseSerializer):
 class CustomerCreateSerializer(BaseSerializer):
     name = serializers.CharField(required=True, min_length=SERIALIZER_MIN_NAME_LENGTH, max_length=SERIALIZER_MAX_NAME_LENGTH)
     phone = serializers.CharField(required=True, min_length=SERIALIZER_MIN_PHONE_LENGTH, max_length=SERIALIZER_MAX_PHONE_LENGTH)
+
+
+class CustomerUpdateSerializer(BaseSerializer):
+    name = serializers.CharField(required=False, min_length=SERIALIZER_MIN_NAME_LENGTH, max_length=SERIALIZER_MAX_NAME_LENGTH)
+    phone = serializers.CharField(required=False, min_length=SERIALIZER_MIN_PHONE_LENGTH, max_length=SERIALIZER_MAX_PHONE_LENGTH)
