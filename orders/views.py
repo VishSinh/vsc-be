@@ -54,10 +54,16 @@ class OrderView(APIView):
         )
 
         # Apply filters/sorting
-        def _field_transform(field: str) -> str:
-            # Map logical order_date to date-only DB lookup on order_date
+        def _filter_field_transform(field: str) -> str:
+            # Filters on order_date should be date-only
             if field == "order_date":
                 return "order_date__date"
+            return field
+
+        def _sort_field_transform(field: str) -> str:
+            # Sorting should use full datetime to preserve time ordering
+            if field == "order_date":
+                return "order_date"
             return field
 
         helper = QueryFilterSortHelper(
@@ -69,7 +75,8 @@ class OrderView(APIView):
             per_field_lookups={
                 "order_date": ("", "__gte", "__lte"),
             },
-            field_transform=_field_transform,
+            filter_field_transform=_filter_field_transform,
+            sort_field_transform=_sort_field_transform,
         )
 
         orders_queryset = helper.apply(orders_queryset, params)

@@ -31,13 +31,18 @@ class QueryFilterSortHelper:
         default_sort_order: str = "desc",
         per_field_lookups: Optional[Dict[str, Sequence[str]]] = None,
         field_transform: Optional[Callable[[str], str]] = None,
+        filter_field_transform: Optional[Callable[[str], str]] = None,
+        sort_field_transform: Optional[Callable[[str], str]] = None,
     ) -> None:
         self.allowed_filter_fields = tuple(allowed_filter_fields)
         self.allowed_sort_fields = tuple(allowed_sort_fields)
         self.default_sort_by = default_sort_by
         self.default_sort_order = default_sort_order
         self.per_field_lookups = per_field_lookups or {}
+        # Backward-compat: if only field_transform is provided, use it for both filters and sorting
         self.field_transform = field_transform
+        self.filter_field_transform = filter_field_transform or field_transform
+        self.sort_field_transform = sort_field_transform or field_transform
 
     def apply(self, queryset, params: Union[Mapping, object]):
         values = self._extract_values(params)
@@ -52,8 +57,8 @@ class QueryFilterSortHelper:
                     value = values.get(param_name)
                     if value is not None and value != "":
                         target_field = field
-                        if self.field_transform:
-                            target_field = self.field_transform(field)
+                        if self.filter_field_transform:
+                            target_field = self.filter_field_transform(field)
                         filter_key = f"{target_field}{lookup}"
                         filter_kwargs[filter_key] = value
 
@@ -70,8 +75,8 @@ class QueryFilterSortHelper:
             sort_order = self.default_sort_order
 
         target_sort_field = sort_by
-        if self.field_transform:
-            target_sort_field = self.field_transform(sort_by)
+        if self.sort_field_transform:
+            target_sort_field = self.sort_field_transform(sort_by)
         order_field = f"-{target_sort_field}" if sort_order == "desc" else target_sort_field
         queryset = queryset.order_by(order_field)
 
