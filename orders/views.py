@@ -255,6 +255,23 @@ class BillView(APIView):
         else:
             bills_queryset = BillService.get_bills()
 
+        # Apply filters/sorting (created_at) and paid filter
+        helper = QueryFilterSortHelper(
+            allowed_filter_fields=["created_at"],
+            allowed_sort_fields=["created_at"],
+            default_sort_by="created_at",
+            default_sort_order="desc",
+        )
+
+        bills_queryset = helper.apply(bills_queryset, params)
+
+        paid = params.get_value("paid", None)
+        if paid is not None:
+            if paid is True:
+                bills_queryset = bills_queryset.filter(payment_status="PAID")
+            else:
+                bills_queryset = bills_queryset.filter(payment_status__in=["PENDING", "PARTIAL"]) 
+
         bills, page_info = PaginationHelper.paginate_queryset(bills_queryset, params.get_value("page"), params.get_value("page_size"))
 
         detailed_bills = BillService.calculate_bills_details_in_bulk(bills)

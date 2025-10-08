@@ -22,11 +22,14 @@ class OrderQueryParams(BaseListParams):
     sort_order = serializers.ChoiceField(required=False, choices=["asc", "desc"], default="desc")
 
 
-class BillQueryParams(ParamSerializer):
+class BillQueryParams(BaseListParams):
     order_id = serializers.UUIDField(required=False)
     phone = serializers.CharField(required=False, min_length=SERIALIZER_MIN_PHONE_LENGTH, max_length=SERIALIZER_MAX_PHONE_LENGTH)
-    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
-    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
+    # Filters: paid = True shows only PAID; False shows PENDING or PARTIAL
+    paid = serializers.BooleanField(required=False)
+    # Sorting
+    sort_by = serializers.ChoiceField(required=False, choices=["created_at"], default="created_at")
+    sort_order = serializers.ChoiceField(required=False, choices=["asc", "desc"], default="desc")
 
 
 class PaymentQueryParams(ParamSerializer):
