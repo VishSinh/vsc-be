@@ -62,6 +62,9 @@ class OrderView(APIView):
             # Filters on order_date should be date-only
             if field == "order_date":
                 return "order_date__date"
+            # Map phone -> customer__phone
+            if field == "phone":
+                return "customer__phone"
             return field
 
         def _sort_field_transform(field: str) -> str:
@@ -71,13 +74,14 @@ class OrderView(APIView):
             return field
 
         helper = QueryFilterSortHelper(
-            allowed_filter_fields=["order_date"],
+            allowed_filter_fields=["order_date", "phone"],
             allowed_sort_fields=["order_date"],
             default_sort_by="order_date",
             default_sort_order="desc",
             # for dates, only gte/lte; exact date uses the exact field provided
             per_field_lookups={
                 "order_date": ("", "__gte", "__lte"),
+                "phone": ("",),
             },
             filter_field_transform=_filter_field_transform,
             sort_field_transform=_sort_field_transform,

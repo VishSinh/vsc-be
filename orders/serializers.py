@@ -10,6 +10,7 @@ from production.models import BoxOrder
 
 class OrderQueryParams(BaseListParams):
     customer_id = serializers.UUIDField(required=False)
+    phone = serializers.CharField(required=False, min_length=SERIALIZER_MIN_PHONE_LENGTH, max_length=SERIALIZER_MAX_PHONE_LENGTH)
 
     # Filters
     delivered_or_paid = serializers.BooleanField(required=False)
