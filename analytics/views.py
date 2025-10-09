@@ -1,3 +1,6 @@
+from decimal import Decimal
+
+from django.db import models
 from django.utils import timezone
 from rest_framework.views import APIView
 
@@ -6,6 +9,7 @@ from analytics.serializers import DetailedAnalyticsParams
 from analytics.services import AnalyticsService
 from core.decorators import forge
 from core.utils import model_unwrap
+from orders.services import BillService
 
 
 class DashboardView(APIView):
@@ -113,6 +117,25 @@ class DetailedAnalyticsView(APIView):
                 bill = getattr(order, "bill", None)
                 order_data["bill_id"] = model_unwrap(bill).get("id") if bill else None
                 results.append(order_data)
+            return results
+        elif analytics_type == AnalyticsType.PENDING_BILLS:
+            # Compute summaries and pending amounts similar to Bill API
+            bills_qs = fetcher()
+            detailed_bills = BillService.calculate_bills_details_in_bulk(bills_qs)
+            results = []
+            for bill_details in detailed_bills:
+                bill_instance = bill_details["bill_instance"]
+                summary = bill_details["summary"]
+
+                total_paid = bill_instance.payments.aggregate(total=models.Sum("amount")).get("total") or Decimal("0.00")
+                total_adjusted = bill_instance.adjustments.aggregate(total=models.Sum("amount")).get("total") or Decimal("0.00")
+                summary_with_pending = dict(summary)
+                summary_with_pending["pending_amount"] = summary["total_with_tax"] - (total_paid + total_adjusted)
+
+                serialized_bill = model_unwrap(bill_instance)
+                serialized_bill["order"] = model_unwrap(bill_instance.order)
+                serialized_bill["summary"] = {k: f"{v:.2f}" for k, v in summary_with_pending.items()}
+                results.append(serialized_bill)
             return results
         else:
             queryset = fetcher()
