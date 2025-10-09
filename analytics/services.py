@@ -457,3 +457,93 @@ class CardAnalyticsService:
             "order_status_breakdown": status_breakdown,
             "orders": orders_list,
         }
+
+
+class OrderAnalyticsService:
+    """Per-order profit computation mirroring AnalyticsService rules.
+
+    Profit includes:
+    - Card items: (price_per_item - discount_amount - cost_price_at_sale) * quantity
+    - Printing jobs: total_printing_cost - (total_printing_expense + total_tracing_expense)
+    - Box orders: total_box_cost - total_box_expense
+    - Third-party service items: total_cost - total_expense
+
+    An order is only considered calculable when all required expenses are logged:
+    - For any printing job: both total_printing_expense and total_tracing_expense must be set
+    - For any box order: total_box_expense must be set
+    - For any service item: total_expense must be set
+
+    Bill adjustments are subtracted from the computed profit to reflect negotiated reductions.
+    """
+
+    @staticmethod
+    def calculate_order_profit(order: Order) -> Decimal | None:
+        # Guard: ensure all required production expenses are logged
+        is_ready_for_calculation = True
+        current_order_profit = Decimal("0.0")
+
+        for item in order.order_items.all():
+            # Required expenses present for printing jobs
+            if item.requires_printing:
+                for job in item.printing_jobs.all():
+                    if job.total_printing_expense is None or job.total_tracing_expense is None:
+                        is_ready_for_calculation = False
+                        break
+            if not is_ready_for_calculation:
+                break
+
+            # Required expenses present for box orders
+            if item.requires_box:
+                for box in item.box_orders.all():
+                    if box.total_box_expense is None:
+                        is_ready_for_calculation = False
+                        break
+            if not is_ready_for_calculation:
+                break
+
+            # Determine effective cost price, preferring sale-time transaction capture
+            inventory_transactions = getattr(item, "inventory_transactions", None)
+            if inventory_transactions and hasattr(inventory_transactions, "all"):
+                transactions = inventory_transactions.all()
+            else:
+                transactions = []
+
+            sale_tx = next(
+                (tx for tx in transactions if tx.transaction_type == InventoryTransaction.TransactionType.SALE),
+                None,
+            )
+            effective_cost_price = sale_tx.cost_price if sale_tx else item.card.cost_price
+
+            # Card item profit
+            card_sale_profit = (item.price_per_item - item.discount_amount - effective_cost_price) * item.quantity
+            current_order_profit += card_sale_profit
+
+            # Printing jobs profit
+            for job in item.printing_jobs.all():
+                current_order_profit += job.total_printing_cost - (job.total_printing_expense + job.total_tracing_expense)
+
+            # Box orders profit
+            for box in item.box_orders.all():
+                current_order_profit += box.total_box_cost - box.total_box_expense
+
+        if not is_ready_for_calculation:
+            return None
+
+        # Third-party service items must also be finalized
+        for s_item in order.service_items.all():
+            if s_item.total_expense is None:
+                return None
+            current_order_profit += s_item.total_cost - s_item.total_expense
+
+        # Subtract any bill adjustments tied to this order's bill
+        order_adjustments = (
+            BillAdjustment.objects.filter(bill__order_id=order.id).aggregate(total=Sum("amount")).get("total") or Decimal("0.0")
+        )
+        current_order_profit -= order_adjustments
+
+        return current_order_profit
+
+    @staticmethod
+    def get_order_profit_by_id(order_id: str) -> Decimal | None:
+        order = OrderService.get_order_by_id(order_id)
+        return OrderAnalyticsService.calculate_order_profit(order)

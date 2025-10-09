@@ -20,6 +20,7 @@ class OrderService:
                 queryset=OrderItem.objects.select_related("card").prefetch_related(
                     "box_orders",
                     "printing_jobs",
+                    "inventory_transactions",
                 ),
             ),
             "service_items",

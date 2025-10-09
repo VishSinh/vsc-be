@@ -22,6 +22,7 @@ from orders.serializers import (
     PaymentQueryParams,
 )
 from orders.services import BillAdjustmentService, BillService, OrderService, PaymentService, ServiceOrderItemService
+from analytics.services import OrderAnalyticsService
 from production.services import BoxOrderService, PrintingJobService
 
 
@@ -41,6 +42,9 @@ class OrderView(APIView):
             order_data["order_items"] = order_items_data
             order_data["service_items"] = model_unwrap(order.service_items.all())
             order_data["bill_id"] = model_unwrap(order.bill).get("id")
+            # Compute order profit; None when pending expenses exist
+            profit = OrderAnalyticsService.calculate_order_profit(order)
+            order_data["order_profit"] = f"{profit:.2f}" if isinstance(profit, Decimal) else None
             return order_data
 
         if order_id:
@@ -163,6 +167,9 @@ class OrderView(APIView):
         order_data["service_items"] = created_service_items
 
         order_data["bill_id"] = model_unwrap(bill).get("id")
+        # Compute order profit for newly created order
+        profit = OrderAnalyticsService.calculate_order_profit(order)
+        order_data["order_profit"] = f"{profit:.2f}" if isinstance(profit, Decimal) else None
 
         return order_data
 
@@ -188,6 +195,9 @@ class OrderView(APIView):
 
         bill = BillService.get_bill_by_order_id(order_id)
         order_data["bill_id"] = model_unwrap(bill).get("id")
+        # Compute order profit for updated order
+        profit = OrderAnalyticsService.calculate_order_profit(updated_order)
+        order_data["order_profit"] = f"{profit:.2f}" if isinstance(profit, Decimal) else None
 
         return order_data
 
