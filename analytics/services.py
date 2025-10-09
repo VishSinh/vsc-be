@@ -23,6 +23,14 @@ class AnalyticsService:
         return Card.objects.filter(quantity__lte=settings.OUT_OF_STOCK_THRESHOLD, is_active=True).count()
 
     @staticmethod
+    def get_medium_stock_items():
+        return Card.objects.filter(
+            quantity__gt=settings.LOW_STOCK_THRESHOLD,
+            quantity__lte=settings.MEDIUM_STOCK_THRESHOLD,
+            is_active=True,
+        ).count()
+
+    @staticmethod
     def get_total_orders_current_month():
         today = timezone.now().date()
         start_of_month = today.replace(day=1)
@@ -278,6 +286,12 @@ class AnalyticsService:
     @staticmethod
     def get_out_of_stock_cards_list():
         return Card.objects.filter(quantity__lte=settings.OUT_OF_STOCK_THRESHOLD, is_active=True).select_related("vendor")
+
+    @staticmethod
+    def get_medium_stock_cards_list():
+        return Card.objects.filter(
+            quantity__gt=settings.LOW_STOCK_THRESHOLD, quantity__lte=settings.MEDIUM_STOCK_THRESHOLD, is_active=True
+        ).select_related("vendor")
 
     @staticmethod
     def get_pending_orders_list():

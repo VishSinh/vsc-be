@@ -49,8 +49,9 @@ IMAGE_UPLOAD_FOLDER = config("IMAGE_UPLOAD_FOLDER", default="images")
 
 # Business Settings
 TAX_PERCENTAGE = config("TAX_PERCENTAGE", default=0.0, cast=float)
-LOW_STOCK_THRESHOLD = config("LOW_STOCK_THRESHOLD", default=250, cast=int)
-OUT_OF_STOCK_THRESHOLD = config("OUT_OF_STOCK_THRESHOLD", default=50, cast=int)
+LOW_STOCK_THRESHOLD = config("LOW_STOCK_THRESHOLD", default=100, cast=int)
+MEDIUM_STOCK_THRESHOLD = config("MEDIUM_STOCK_THRESHOLD", default=250, cast=int)
+OUT_OF_STOCK_THRESHOLD = config("OUT_OF_STOCK_THRESHOLD", default=0, cast=int)
 # =================================================
 
 INSTALLED_APPS = [
