@@ -312,9 +312,20 @@ class AnalyticsService:
         )
 
     @staticmethod
-    def get_todays_orders_list():
+    def get_todays_orders_list(days: int = 1):
         today = timezone.now().date()
-        return OrderService.get_orders_queryset().select_related("bill").filter(order_date__date=today).order_by("-order_date")
+        if days <= 1:
+            date_filter = Q(order_date__date=today)
+        else:
+            start_date = today - timedelta(days=days - 1)
+            date_filter = Q(order_date__date__range=[start_date, today])
+
+        return (
+            OrderService.get_orders_queryset()
+            .select_related("bill")
+            .filter(date_filter)
+            .order_by("-order_date")
+        )
 
 
 class CardAnalyticsService:

@@ -72,7 +72,8 @@ class DetailedAnalyticsView(APIView):
             return data
         elif analytics_type == AnalyticsType.TODAYS_ORDERS:
             # Custom weaving to include nested order_items, printing_jobs, box_orders, service_items, and bill_id
-            queryset = fetcher()
+            days = params.get_value("days", 1)
+            queryset = fetcher(days=days)
             results = []
             for order in queryset:
                 order_data = model_unwrap(order)
