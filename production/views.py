@@ -37,6 +37,7 @@ class BoxOrderView(APIView):
 
         results = [
             {
+                "order_id": str(bo.order_item.order.id),
                 "box_order_id": str(bo.id),
                 "order_name": bo.order_item.order.name,
                 "quantity": bo.box_quantity,
@@ -216,6 +217,7 @@ class PrintingView(APIView):
 
         results = [
             {
+                "order_id": str(pj.order_item.order.id),
                 "printing_job_id": str(pj.id),
                 "order_name": pj.order_item.order.name,
                 "quantity": pj.print_quantity,
@@ -253,6 +255,7 @@ class TracingView(APIView):
 
         results = [
             {
+                "order_id": str(pj.order_item.order.id),
                 "printing_job_id": str(pj.id),
                 "order_name": pj.order_item.order.name,
                 "quantity": pj.print_quantity,
