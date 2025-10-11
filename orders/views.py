@@ -192,7 +192,11 @@ class OrderView(APIView):
         ServiceOrderItemService.remove_service_items(order, body.get_value("remove_service_item_ids"))
         ServiceOrderItemService.add_service_items(order, body.get_value("add_service_items"))
         updated_order = OrderService.update_order_misc(
-            order, body.get_value("order_status"), body.get_value("delivery_date"), body.get_value("special_instruction")
+            order,
+            body.get_value("order_status"),
+            body.get_value("delivery_date"),
+            body.get_value("special_instruction"),
+            name=body.get_value("name", None),
         )
 
         order_data = model_unwrap(updated_order)

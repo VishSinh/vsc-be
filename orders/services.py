@@ -207,12 +207,14 @@ class OrderService:
         return order
 
     @staticmethod
-    def update_order_misc(order, order_status, delivery_date, special_instruction):
+    def update_order_misc(order, order_status, delivery_date, special_instruction, name=None):
         if delivery_date and order.order_date and order.order_date > delivery_date:
             raise Conflict("Order date cannot be greater than delivery date")
         order.order_status = order_status or order.order_status
         order.delivery_date = delivery_date or order.delivery_date
         order.special_instruction = special_instruction or order.special_instruction
+        if name is not None and name != "":
+            order.name = name
         order.save()
         # If status not explicitly provided, try to keep it consistent
         if not order_status:

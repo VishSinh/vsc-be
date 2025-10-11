@@ -153,6 +153,7 @@ class OrderUpdateSerializer(BaseSerializer):
     add_items = serializers.ListField(child=AddOrderItem(), required=False)
     # Items to remove (by order_item_id)
     remove_item_ids = serializers.ListField(child=serializers.UUIDField(), required=False)
+    name = serializers.CharField(required=False, allow_blank=False)
     order_status = serializers.ChoiceField(required=False, choices=Order.OrderStatus.choices)
     delivery_date = serializers.DateTimeField(required=False)
     special_instruction = serializers.CharField(required=False, allow_blank=True)
