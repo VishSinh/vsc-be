@@ -263,6 +263,20 @@ class PrintingJobService:
         return printing_job
 
     @staticmethod
+    def set_printer_paid(printing_job_id, is_paid):
+        printing_job = PrintingJobService.get_printing_job_by_id(printing_job_id)
+        printing_job.printer_paid = is_paid
+        printing_job.save(update_fields=["printer_paid", "updated_at"])
+        return printing_job
+
+    @staticmethod
+    def set_tracing_studio_paid(printing_job_id, is_paid):
+        printing_job = PrintingJobService.get_printing_job_by_id(printing_job_id)
+        printing_job.tracing_studio_paid = is_paid
+        printing_job.save(update_fields=["tracing_studio_paid", "updated_at"])
+        return printing_job
+
+    @staticmethod
     def validate_print_quantity(printing_job, new_quantity):
         """Validate that total print quantity doesn't exceed order item quantity"""
         if new_quantity is None:

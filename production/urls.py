@@ -13,5 +13,7 @@ urlpatterns = [
     path("box-orders/<uuid:box_order_id>/", BoxOrderView.as_view(), name="box-order-detail"),
     path("printing-jobs/<uuid:printing_job_id>/", PrintingJobView.as_view(), name="printing-job-detail"),
     path("printing/", PrintingView.as_view(), name="printing-list"),
+    path("printing/<uuid:printing_job_id>/", PrintingView.as_view(), name="printing-detail"),
     path("tracing/", TracingView.as_view(), name="tracing-list"),
+    path("tracing/<uuid:printing_job_id>/", TracingView.as_view(), name="tracing-detail"),
 ]

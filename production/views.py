@@ -13,7 +13,9 @@ from production.serializers import (
     PrinterCreateSerializer,
     PrinterQueryParams,
     PrintingJobUpdateSerializer,
+    PrinterPaidToggleSerializer,
     PrintingListParams,
+    TracingPaidToggleSerializer,
     TracingListParams,
     TracingStudioCreateSerializer,
     TracingStudioQueryParams,
@@ -35,6 +37,7 @@ class BoxOrderView(APIView):
 
         results = [
             {
+                "box_order_id": str(bo.id),
                 "order_name": bo.order_item.order.name,
                 "quantity": bo.box_quantity,
                 "box_maker_paid": bo.box_maker_paid,
@@ -213,6 +216,7 @@ class PrintingView(APIView):
 
         results = [
             {
+                "printing_job_id": str(pj.id),
                 "order_name": pj.order_item.order.name,
                 "quantity": pj.print_quantity,
                 "printer_paid": pj.printer_paid,
@@ -222,6 +226,16 @@ class PrintingView(APIView):
         ]
 
         return results, page_info
+
+    @forge
+    def patch(self, request, printing_job_id):
+        body = PrinterPaidToggleSerializer.validate_request(request)
+
+        printing_job = PrintingJobService.set_printer_paid(printing_job_id=printing_job_id, is_paid=body.get_value("printer_paid"))
+
+        to_return = model_unwrap(printing_job)
+        to_return["message"] = "Printer paid status updated"
+        return to_return
 
 
 class TracingView(APIView):
@@ -239,6 +253,7 @@ class TracingView(APIView):
 
         results = [
             {
+                "printing_job_id": str(pj.id),
                 "order_name": pj.order_item.order.name,
                 "quantity": pj.print_quantity,
                 "tracing_studio_paid": pj.tracing_studio_paid,
@@ -247,3 +262,13 @@ class TracingView(APIView):
         ]
 
         return results, page_info
+
+    @forge
+    def patch(self, request, printing_job_id):
+        body = TracingPaidToggleSerializer.validate_request(request)
+
+        printing_job = PrintingJobService.set_tracing_studio_paid(printing_job_id=printing_job_id, is_paid=body.get_value("tracing_studio_paid"))
+
+        to_return = model_unwrap(printing_job)
+        to_return["message"] = "Tracing studio paid status updated"
+        return to_return

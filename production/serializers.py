@@ -68,6 +68,7 @@ class BoxOrderUpdateSerializer(BaseSerializer):
     box_type = serializers.ChoiceField(required=False, choices=BoxOrder.BoxType.choices)
     box_quantity = serializers.IntegerField(required=False)
     estimated_completion = serializers.DateTimeField(required=False)
+    box_maker_paid = serializers.BooleanField(required=False)
 
 
 class PrintingJobUpdateSerializer(BaseSerializer):
@@ -80,3 +81,13 @@ class PrintingJobUpdateSerializer(BaseSerializer):
     printing_status = serializers.ChoiceField(required=False, choices=PrintingJob.PrintingStatus.choices)
     print_quantity = serializers.IntegerField(required=False)
     estimated_completion = serializers.DateTimeField(required=False)
+    printer_paid = serializers.BooleanField(required=False)
+    tracing_studio_paid = serializers.BooleanField(required=False)
+
+
+class PrinterPaidToggleSerializer(BaseSerializer):
+    printer_paid = serializers.BooleanField()
+
+
+class TracingPaidToggleSerializer(BaseSerializer):
+    tracing_studio_paid = serializers.BooleanField()
