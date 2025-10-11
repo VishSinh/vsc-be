@@ -77,6 +77,9 @@ class BoxOrderService:
             from production.services import BoxMakerService
 
             box_order.box_maker = BoxMakerService.validate_box_maker_exists(box_maker_id)
+        # If marked paid, mark as completed
+        if getattr(box_order, "box_maker_paid", False) and box_order.box_status != BoxOrder.BoxStatus.COMPLETED:
+            box_order.box_status = BoxOrder.BoxStatus.COMPLETED
         BoxOrderService.update_box_order_status(box_order, box_maker_id=box_maker_id)
         box_order.save()
 
@@ -266,6 +269,9 @@ class PrintingJobService:
     def set_printer_paid(printing_job_id, is_paid):
         printing_job = PrintingJobService.get_printing_job_by_id(printing_job_id)
         printing_job.printer_paid = is_paid
+        if is_paid and printing_job.printing_status != PrintingJob.PrintingStatus.COMPLETED:
+            # Mark job completed when payment is done
+            printing_job.printing_status = PrintingJob.PrintingStatus.COMPLETED
         printing_job.save(update_fields=["printer_paid", "updated_at"])
         return printing_job
 
