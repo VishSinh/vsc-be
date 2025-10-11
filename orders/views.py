@@ -5,6 +5,7 @@ from django.utils import timezone
 from rest_framework.views import APIView
 
 from accounts.services import CustomerService
+from analytics.services import OrderAnalyticsService
 from core.authorization import Permission, require_permission
 from core.decorators import forge
 from core.helpers.pagination import PaginationHelper
@@ -22,7 +23,6 @@ from orders.serializers import (
     PaymentQueryParams,
 )
 from orders.services import BillAdjustmentService, BillService, OrderService, PaymentService, ServiceOrderItemService
-from analytics.services import OrderAnalyticsService
 from production.services import BoxOrderService, PrintingJobService
 
 
@@ -288,7 +288,7 @@ class BillView(APIView):
             if paid is True:
                 bills_queryset = bills_queryset.filter(payment_status="PAID")
             else:
-                bills_queryset = bills_queryset.filter(payment_status__in=["PENDING", "PARTIAL"]) 
+                bills_queryset = bills_queryset.filter(payment_status__in=["PENDING", "PARTIAL"])
 
         bills, page_info = PaginationHelper.paginate_queryset(bills_queryset, params.get_value("page"), params.get_value("page_size"))
 

@@ -4,13 +4,17 @@ from core.decorators import forge
 from core.helpers.pagination import PaginationHelper
 from core.utils import model_unwrap
 from orders.services import OrderStatusService
+from production.models import BoxOrder, PrintingJob
 from production.serializers import (
     BoxMakerCreateSerializer,
     BoxMakerQueryParams,
+    BoxOrderListParams,
     BoxOrderUpdateSerializer,
     PrinterCreateSerializer,
     PrinterQueryParams,
     PrintingJobUpdateSerializer,
+    PrintingListParams,
+    TracingListParams,
     TracingStudioCreateSerializer,
     TracingStudioQueryParams,
 )
@@ -18,6 +22,28 @@ from production.services import BoxMakerService, BoxOrderService, PrinterService
 
 
 class BoxOrderView(APIView):
+    @forge
+    def get(self, request):
+        params = BoxOrderListParams.validate_params(request)
+
+        box_maker_id = params.get_value("box_maker_id")
+        BoxMakerService.validate_box_maker_exists(box_maker_id)
+
+        queryset = BoxOrderService.get_box_orders_by_box_maker(box_maker_id)
+
+        queryset, page_info = PaginationHelper.paginate_queryset(queryset, params.get_value("page"), params.get_value("page_size"))
+
+        results = [
+            {
+                "order_name": bo.order_item.order.name,
+                "quantity": bo.box_quantity,
+                "box_maker_paid": bo.box_maker_paid,
+            }
+            for bo in queryset
+        ]
+
+        return results, page_info
+
     @forge
     def patch(self, request, box_order_id):
         body = BoxOrderUpdateSerializer.validate_request(request)
@@ -170,3 +196,54 @@ class BoxMakerView(APIView):
         body = BoxMakerCreateSerializer.validate_request(request)
         BoxMakerService.create_box_maker(name=body.get_value("name"), phone=body.get_value("phone"))
         return {"message": "Box maker created successfully"}
+
+
+class PrintingView(APIView):
+
+    @forge
+    def get(self, request):
+        params = PrintingListParams.validate_params(request)
+
+        printer_id = params.get_value("printer_id")
+        PrinterService.validate_printer_exists(printer_id)
+
+        queryset = PrintingJobService.get_printing_jobs_by_printer(printer_id)
+
+        queryset, page_info = PaginationHelper.paginate_queryset(queryset, params.get_value("page"), params.get_value("page_size"))
+
+        results = [
+            {
+                "order_name": pj.order_item.order.name,
+                "quantity": pj.print_quantity,
+                "printer_paid": pj.printer_paid,
+                "impressions": pj.impressions,
+            }
+            for pj in queryset
+        ]
+
+        return results, page_info
+
+
+class TracingView(APIView):
+
+    @forge
+    def get(self, request):
+        params = TracingListParams.validate_params(request)
+
+        tracing_studio_id = params.get_value("tracing_studio_id")
+        TracingStudioService.validate_tracing_studio_exists(tracing_studio_id)
+
+        queryset = PrintingJobService.get_printing_jobs_by_tracing_studio(tracing_studio_id)
+
+        queryset, page_info = PaginationHelper.paginate_queryset(queryset, params.get_value("page"), params.get_value("page_size"))
+
+        results = [
+            {
+                "order_name": pj.order_item.order.name,
+                "quantity": pj.print_quantity,
+                "tracing_studio_paid": pj.tracing_studio_paid,
+            }
+            for pj in queryset
+        ]
+
+        return results, page_info

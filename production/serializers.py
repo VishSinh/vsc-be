@@ -24,6 +24,24 @@ class BoxMakerQueryParams(ParamSerializer):
     page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
 
 
+class BoxOrderListParams(ParamSerializer):
+    box_maker_id = serializers.UUIDField(required=True)
+    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
+    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
+
+
+class PrintingListParams(ParamSerializer):
+    printer_id = serializers.UUIDField(required=True)
+    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
+    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
+
+
+class TracingListParams(ParamSerializer):
+    tracing_studio_id = serializers.UUIDField(required=True)
+    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
+    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
+
+
 ########################################################
 
 
@@ -55,6 +73,7 @@ class BoxOrderUpdateSerializer(BaseSerializer):
 class PrintingJobUpdateSerializer(BaseSerializer):
     printer_id = serializers.UUIDField(required=False)
     tracing_studio_id = serializers.UUIDField(required=False)
+    impressions = serializers.IntegerField(required=False, min_value=1)
     total_printing_cost = serializers.DecimalField(required=False, max_digits=10, decimal_places=2)
     total_printing_expense = serializers.DecimalField(required=False, max_digits=10, decimal_places=2)
     total_tracing_expense = serializers.DecimalField(required=False, max_digits=10, decimal_places=2)

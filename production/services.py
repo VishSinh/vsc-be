@@ -43,6 +43,11 @@ class BoxOrderService:
         return BoxOrder.objects.filter(order_item_id__in=order_item_ids)
 
     @staticmethod
+    def get_box_orders_by_box_maker(box_maker_id):
+        """Get box orders for a specific box maker with necessary relations"""
+        return BoxOrder.objects.filter(box_maker_id=box_maker_id).select_related("order_item", "order_item__order").order_by("-created_at")
+
+    @staticmethod
     def get_latest_by_order_item_id(order_item_id):
         return BoxOrder.objects.filter(order_item_id=order_item_id).order_by("-created_at").first()
 
@@ -190,6 +195,18 @@ class PrintingJobService:
     def get_printing_jobs_bulk(order_item_ids):
         """Get printing jobs for multiple order items in one query"""
         return PrintingJob.objects.filter(order_item_id__in=order_item_ids)
+
+    @staticmethod
+    def get_printing_jobs_by_printer(printer_id):
+        """Get printing jobs assigned to a specific printer with necessary relations"""
+        return PrintingJob.objects.filter(printer_id=printer_id).select_related("order_item", "order_item__order").order_by("-created_at")
+
+    @staticmethod
+    def get_printing_jobs_by_tracing_studio(tracing_studio_id):
+        """Get printing jobs assigned to a specific tracing studio with necessary relations"""
+        return (
+            PrintingJob.objects.filter(tracing_studio_id=tracing_studio_id).select_related("order_item", "order_item__order").order_by("-created_at")
+        )
 
     @staticmethod
     def get_latest_by_order_item_id(order_item_id):

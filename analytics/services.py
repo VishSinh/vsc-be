@@ -334,12 +334,7 @@ class AnalyticsService:
             start_date = today - timedelta(days=days - 1)
             date_filter = Q(order_date__date__range=[start_date, today])
 
-        return (
-            OrderService.get_orders_queryset()
-            .select_related("bill")
-            .filter(date_filter)
-            .order_by("-order_date")
-        )
+        return OrderService.get_orders_queryset().select_related("bill").filter(date_filter).order_by("-order_date")
 
 
 class CardAnalyticsService:
@@ -561,9 +556,7 @@ class OrderAnalyticsService:
             current_order_profit += s_item.total_cost - s_item.total_expense
 
         # Subtract any bill adjustments tied to this order's bill
-        order_adjustments = (
-            BillAdjustment.objects.filter(bill__order_id=order.id).aggregate(total=Sum("amount")).get("total") or Decimal("0.0")
-        )
+        order_adjustments = BillAdjustment.objects.filter(bill__order_id=order.id).aggregate(total=Sum("amount")).get("total") or Decimal("0.0")
         current_order_profit -= order_adjustments
 
         return current_order_profit
