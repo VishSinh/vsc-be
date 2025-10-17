@@ -1,6 +1,6 @@
 from core.exceptions import Conflict, ResourceNotFound
 from orders.services import OrderStatusService
-from production.models import BoxMaker, BoxOrder, Printer, PrintingJob, TracingStudio
+from production.models import BoxMaker, BoxOrder, Printer, PrintingJob, TracingStudio, VendorPaymentStatus
 
 
 class BoxOrderService:
@@ -57,7 +57,14 @@ class BoxOrderService:
 
     @staticmethod
     def update_box_order(
-        box_order, box_type=None, box_quantity=None, total_box_cost=None, box_status=None, box_maker_id=None, estimated_completion=None
+        box_order,
+        box_type=None,
+        box_quantity=None,
+        total_box_cost=None,
+        box_status=None,
+        box_maker_id=None,
+        estimated_completion=None,
+        box_maker_vendor_status=None,
     ):
         if box_type is not None:
             BoxOrderService.validate_box_type(box_order, box_type)
@@ -73,12 +80,14 @@ class BoxOrderService:
         if box_status is not None:
             BoxOrderService.validate_box_status_transition(box_order, box_status)
             box_order.box_status = box_status
+        if box_maker_vendor_status is not None:
+            box_order.box_maker_vendor_status = box_maker_vendor_status
         if box_maker_id is not None:
             from production.services import BoxMakerService
 
             box_order.box_maker = BoxMakerService.validate_box_maker_exists(box_maker_id)
-        # If marked paid, mark as completed
-        if getattr(box_order, "box_maker_paid", False) and box_order.box_status != BoxOrder.BoxStatus.COMPLETED:
+        # If vendor status is PAID, ensure completed
+        if getattr(box_order, "box_maker_vendor_status", VendorPaymentStatus.PENDING) == VendorPaymentStatus.PAID and box_order.box_status != BoxOrder.BoxStatus.COMPLETED:
             box_order.box_status = BoxOrder.BoxStatus.COMPLETED
         BoxOrderService.update_box_order_status(box_order, box_maker_id=box_maker_id)
         box_order.save()
@@ -156,7 +165,23 @@ class BoxOrderService:
                 box_order.box_status = BoxOrder.BoxStatus.IN_PROGRESS
                 status_changed = True
 
+        # If vendor status is PAID, mark as COMPLETED when allowed
+        if getattr(box_order, "box_maker_vendor_status", None) == VendorPaymentStatus.PAID and box_order.box_status != BoxOrder.BoxStatus.COMPLETED:
+            if BoxOrderService.validate_box_status_transition(box_order, BoxOrder.BoxStatus.COMPLETED, raise_error=False):
+                box_order.box_status = BoxOrder.BoxStatus.COMPLETED
+                status_changed = True
+
         return status_changed
+
+    @staticmethod
+    def set_box_maker_vendor_status(box_order_id, vendor_status):
+        box_order = BoxOrderService.get_box_order_by_id(box_order_id)
+        box_order.box_maker_vendor_status = vendor_status
+        # If PAID, optionally move to COMPLETED
+        if vendor_status == VendorPaymentStatus.PAID and box_order.box_status != BoxOrder.BoxStatus.COMPLETED:
+            box_order.box_status = BoxOrder.BoxStatus.COMPLETED
+        box_order.save(update_fields=["box_maker_vendor_status", "updated_at"])
+        return box_order
 
     @staticmethod
     def validate_box_type(box_order, new_box_type):
@@ -266,20 +291,19 @@ class PrintingJobService:
         return printing_job
 
     @staticmethod
-    def set_printer_paid(printing_job_id, is_paid):
+    def set_printer_vendor_status(printing_job_id, vendor_status):
         printing_job = PrintingJobService.get_printing_job_by_id(printing_job_id)
-        printing_job.printer_paid = is_paid
-        if is_paid and printing_job.printing_status != PrintingJob.PrintingStatus.COMPLETED:
-            # Mark job completed when payment is done
+        printing_job.printer_vendor_status = vendor_status
+        if vendor_status == VendorPaymentStatus.PAID and printing_job.printing_status != PrintingJob.PrintingStatus.COMPLETED:
             printing_job.printing_status = PrintingJob.PrintingStatus.COMPLETED
-        printing_job.save(update_fields=["printer_paid", "updated_at"])
+        printing_job.save(update_fields=["printer_vendor_status", "updated_at"])
         return printing_job
 
     @staticmethod
-    def set_tracing_studio_paid(printing_job_id, is_paid):
+    def set_tracing_vendor_status(printing_job_id, vendor_status):
         printing_job = PrintingJobService.get_printing_job_by_id(printing_job_id)
-        printing_job.tracing_studio_paid = is_paid
-        printing_job.save(update_fields=["tracing_studio_paid", "updated_at"])
+        printing_job.tracing_vendor_status = vendor_status
+        printing_job.save(update_fields=["tracing_vendor_status", "updated_at"])
         return printing_job
 
     @staticmethod

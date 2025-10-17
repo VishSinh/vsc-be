@@ -1,6 +1,6 @@
 from django.urls import path
 
-from production.views import BoxMakerView, BoxOrderView, PrinterView, PrintingJobView, PrintingView, TracingStudioView, TracingView
+from production.views import BoxMakerView, BoxOrderView, BoxingView, PrinterView, PrintingJobView, PrintingView, TracingStudioView, TracingView
 
 urlpatterns = [
     path("printers/", PrinterView.as_view(), name="printer"),
@@ -11,6 +11,8 @@ urlpatterns = [
     path("box-makers/<uuid:box_maker_id>/", BoxMakerView.as_view(), name="box-maker-detail"),
     path("box-orders/", BoxOrderView.as_view(), name="box-order"),
     path("box-orders/<uuid:box_order_id>/", BoxOrderView.as_view(), name="box-order-detail"),
+    path("boxing/", BoxingView.as_view(), name="boxing"),
+    path("boxing/<uuid:box_order_id>/", BoxingView.as_view(), name="boxing-detail"),
     path("printing-jobs/<uuid:printing_job_id>/", PrintingJobView.as_view(), name="printing-job-detail"),
     path("printing/", PrintingView.as_view(), name="printing-list"),
     path("printing/<uuid:printing_job_id>/", PrintingView.as_view(), name="printing-detail"),

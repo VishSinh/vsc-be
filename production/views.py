@@ -13,9 +13,10 @@ from production.serializers import (
     PrinterCreateSerializer,
     PrinterQueryParams,
     PrintingJobUpdateSerializer,
-    PrinterPaidToggleSerializer,
+    PrinterVendorStatusSerializer,
     PrintingListParams,
-    TracingPaidToggleSerializer,
+    BoxingVendorStatusSerializer,
+    TracingVendorStatusSerializer,
     TracingListParams,
     TracingStudioCreateSerializer,
     TracingStudioQueryParams,
@@ -24,30 +25,6 @@ from production.services import BoxMakerService, BoxOrderService, PrinterService
 
 
 class BoxOrderView(APIView):
-    @forge
-    def get(self, request):
-        params = BoxOrderListParams.validate_params(request)
-
-        box_maker_id = params.get_value("box_maker_id")
-        BoxMakerService.validate_box_maker_exists(box_maker_id)
-
-        queryset = BoxOrderService.get_box_orders_by_box_maker(box_maker_id)
-
-        queryset, page_info = PaginationHelper.paginate_queryset(queryset, params.get_value("page"), params.get_value("page_size"))
-
-        results = [
-            {
-                "order_id": str(bo.order_item.order.id),
-                "box_order_id": str(bo.id),
-                "order_name": bo.order_item.order.name,
-                "quantity": bo.box_quantity,
-                "box_maker_paid": bo.box_maker_paid,
-            }
-            for bo in queryset
-        ]
-
-        return results, page_info
-
     @forge
     def patch(self, request, box_order_id):
         body = BoxOrderUpdateSerializer.validate_request(request)
@@ -86,6 +63,8 @@ class BoxOrderView(APIView):
         to_return = model_unwrap(box_order)
         to_return["message"] = "Box order updated successfully"
         return to_return
+
+
 
 
 class PrintingJobView(APIView):
@@ -221,7 +200,7 @@ class PrintingView(APIView):
                 "printing_job_id": str(pj.id),
                 "order_name": pj.order_item.order.name,
                 "quantity": pj.print_quantity,
-                "printer_paid": pj.printer_paid,
+                "printer_vendor_status": pj.printer_vendor_status,
                 "impressions": pj.impressions,
             }
             for pj in queryset
@@ -231,9 +210,11 @@ class PrintingView(APIView):
 
     @forge
     def patch(self, request, printing_job_id):
-        body = PrinterPaidToggleSerializer.validate_request(request)
+        body = PrinterVendorStatusSerializer.validate_request(request)
 
-        printing_job = PrintingJobService.set_printer_paid(printing_job_id=printing_job_id, is_paid=body.get_value("printer_paid"))
+        printing_job = PrintingJobService.set_printer_vendor_status(
+            printing_job_id=printing_job_id, vendor_status=body.get_value("printer_vendor_status")
+        )
 
         to_return = model_unwrap(printing_job)
         to_return["message"] = "Printer paid status updated"
@@ -259,7 +240,7 @@ class TracingView(APIView):
                 "printing_job_id": str(pj.id),
                 "order_name": pj.order_item.order.name,
                 "quantity": pj.print_quantity,
-                "tracing_studio_paid": pj.tracing_studio_paid,
+                "tracing_vendor_status": pj.tracing_vendor_status,
             }
             for pj in queryset
         ]
@@ -268,10 +249,51 @@ class TracingView(APIView):
 
     @forge
     def patch(self, request, printing_job_id):
-        body = TracingPaidToggleSerializer.validate_request(request)
+        body = TracingVendorStatusSerializer.validate_request(request)
 
-        printing_job = PrintingJobService.set_tracing_studio_paid(printing_job_id=printing_job_id, is_paid=body.get_value("tracing_studio_paid"))
+        printing_job = PrintingJobService.set_tracing_vendor_status(
+            printing_job_id=printing_job_id, vendor_status=body.get_value("tracing_vendor_status")
+        )
 
         to_return = model_unwrap(printing_job)
         to_return["message"] = "Tracing studio paid status updated"
+        return to_return
+
+
+
+class BoxingView(APIView):
+    @forge
+    def get(self, request):
+        params = BoxOrderListParams.validate_params(request)
+
+        box_maker_id = params.get_value("box_maker_id")
+        BoxMakerService.validate_box_maker_exists(box_maker_id)
+
+        queryset = BoxOrderService.get_box_orders_by_box_maker(box_maker_id)
+
+        queryset, page_info = PaginationHelper.paginate_queryset(queryset, params.get_value("page"), params.get_value("page_size"))
+
+        results = [
+            {
+                "order_id": str(bo.order_item.order.id),
+                "box_order_id": str(bo.id),
+                "order_name": bo.order_item.order.name,
+                "quantity": bo.box_quantity,
+                "box_maker_vendor_status": bo.box_maker_vendor_status,
+            }
+            for bo in queryset
+        ]
+
+        return results, page_info
+
+    @forge
+    def patch(self, request, box_order_id):
+        body = BoxingVendorStatusSerializer.validate_request(request)
+
+        box_order = BoxOrderService.set_box_maker_vendor_status(
+            box_order_id=box_order_id, vendor_status=body.get_value("box_maker_vendor_status")
+        )
+
+        to_return = model_unwrap(box_order)
+        to_return["message"] = "Box maker vendor status updated"
         return to_return

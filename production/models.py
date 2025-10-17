@@ -44,6 +44,12 @@ class TracingStudio(models.Model):
         return self.name
 
 
+class VendorPaymentStatus(models.TextChoices):
+    PENDING = "PENDING", "Pending"
+    DELIVERED = "DELIVERED", "Delivered"
+    PAID = "PAID", "Paid"
+
+
 class BoxMaker(models.Model):
     """Third-party box manufacturing providers"""
 
@@ -78,8 +84,16 @@ class PrintingJob(models.Model):
     tracing_studio = models.ForeignKey(TracingStudio, on_delete=models.CASCADE, related_name="printing_jobs", null=True, blank=True)
     print_quantity = models.IntegerField()
     impressions = models.PositiveIntegerField(default=1)
-    printer_paid = models.BooleanField(default=False)
-    tracing_studio_paid = models.BooleanField(default=False)
+    printer_vendor_status = models.CharField(
+        max_length=STATUS_LENGTH,
+        choices=VendorPaymentStatus.choices,
+        default=VendorPaymentStatus.PENDING,
+    )
+    tracing_vendor_status = models.CharField(
+        max_length=STATUS_LENGTH,
+        choices=VendorPaymentStatus.choices,
+        default=VendorPaymentStatus.PENDING,
+    )
     total_printing_cost = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES)
     total_printing_expense = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES, null=True, blank=True)
     total_tracing_expense = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES, null=True, blank=True)
@@ -113,12 +127,17 @@ class BoxOrder(models.Model):
         FOLDING = "FOLDING", "Folding"
         COMPLETE = "COMPLETE", "Complete"
 
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order_item = models.ForeignKey(OrderItem, on_delete=models.CASCADE, related_name="box_orders")
     box_maker = models.ForeignKey(BoxMaker, on_delete=models.CASCADE, related_name="box_orders", null=True, blank=True)
     box_type = models.CharField(max_length=BOX_TYPE_LENGTH, choices=BoxType.choices)
     box_quantity = models.IntegerField()
-    box_maker_paid = models.BooleanField(default=False)
+    box_maker_vendor_status = models.CharField(
+        max_length=STATUS_LENGTH,
+        choices=VendorPaymentStatus.choices,
+        default=VendorPaymentStatus.PENDING,
+    )
     total_box_cost = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES)
     total_box_expense = models.DecimalField(max_digits=PRICE_MAX_DIGITS, decimal_places=PRICE_DECIMAL_PLACES, null=True, blank=True)
     box_status = models.CharField(max_length=STATUS_LENGTH, choices=BoxStatus.choices, default=BoxStatus.PENDING)

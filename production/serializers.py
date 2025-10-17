@@ -1,45 +1,32 @@
 from rest_framework import serializers
 
-from core.constants import PAGINATION_DEFAULT_PAGE, PAGINATION_DEFAULT_PAGE_SIZE
 from core.helpers.base_serializer import BaseSerializer
-from core.helpers.param_serializer import ParamSerializer
-from production.models import BoxOrder, PrintingJob
+from core.helpers.query_params import BaseListParams
+from production.models import BoxOrder, PrintingJob, VendorPaymentStatus
 
 
-class PrinterQueryParams(ParamSerializer):
+class PrinterQueryParams(BaseListParams):
     phone = serializers.CharField(required=False)
-    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
-    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
 
 
-class TracingStudioQueryParams(ParamSerializer):
+class TracingStudioQueryParams(BaseListParams):
     phone = serializers.CharField(required=False)
-    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
-    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
 
 
-class BoxMakerQueryParams(ParamSerializer):
+class BoxMakerQueryParams(BaseListParams):
     phone = serializers.CharField(required=False)
-    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
-    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
 
 
-class BoxOrderListParams(ParamSerializer):
+class BoxOrderListParams(BaseListParams):
     box_maker_id = serializers.UUIDField(required=True)
-    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
-    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
 
 
-class PrintingListParams(ParamSerializer):
+class PrintingListParams(BaseListParams):
     printer_id = serializers.UUIDField(required=True)
-    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
-    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
 
 
-class TracingListParams(ParamSerializer):
+class TracingListParams(BaseListParams):
     tracing_studio_id = serializers.UUIDField(required=True)
-    page = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE)
-    page_size = serializers.IntegerField(required=False, default=PAGINATION_DEFAULT_PAGE_SIZE)
 
 
 ########################################################
@@ -68,7 +55,7 @@ class BoxOrderUpdateSerializer(BaseSerializer):
     box_type = serializers.ChoiceField(required=False, choices=BoxOrder.BoxType.choices)
     box_quantity = serializers.IntegerField(required=False)
     estimated_completion = serializers.DateTimeField(required=False)
-    box_maker_paid = serializers.BooleanField(required=False)
+    
 
 
 class PrintingJobUpdateSerializer(BaseSerializer):
@@ -81,13 +68,16 @@ class PrintingJobUpdateSerializer(BaseSerializer):
     printing_status = serializers.ChoiceField(required=False, choices=PrintingJob.PrintingStatus.choices)
     print_quantity = serializers.IntegerField(required=False)
     estimated_completion = serializers.DateTimeField(required=False)
-    printer_paid = serializers.BooleanField(required=False)
-    tracing_studio_paid = serializers.BooleanField(required=False)
+    printer_vendor_status = serializers.ChoiceField(required=False, choices=VendorPaymentStatus.choices)
+    tracing_vendor_status = serializers.ChoiceField(required=False, choices=VendorPaymentStatus.choices)
 
 
-class PrinterPaidToggleSerializer(BaseSerializer):
-    printer_paid = serializers.BooleanField()
+class PrinterVendorStatusSerializer(BaseSerializer):
+    printer_vendor_status = serializers.ChoiceField(choices=VendorPaymentStatus.choices)
 
 
-class TracingPaidToggleSerializer(BaseSerializer):
-    tracing_studio_paid = serializers.BooleanField()
+class TracingVendorStatusSerializer(BaseSerializer):
+    tracing_vendor_status = serializers.ChoiceField(choices=VendorPaymentStatus.choices)
+
+class BoxingVendorStatusSerializer(BaseSerializer):
+    box_maker_vendor_status = serializers.ChoiceField(choices=VendorPaymentStatus.choices)
