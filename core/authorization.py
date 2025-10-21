@@ -68,6 +68,8 @@ class Permission:
 
     # Dashboard Management
     DASHBOARD_READ = "dashboard.read"
+    TODAY_ORDERS_READ = "today.orders.read"
+    PROFIT_READ = "profit.read"
 
     # System Management
     SYSTEM_CONFIG = "system.config"
@@ -99,6 +101,8 @@ class RolePermissions:
         Permission.CUSTOMER_READ,
         Permission.CUSTOMER_CREATE,
         Permission.VENDOR_READ,
+        Permission.TODAY_ORDERS_READ,
+
     ]
 
 
