@@ -1,4 +1,5 @@
 from core.exceptions import Conflict, ResourceNotFound
+from django.db.models import Case, IntegerField, Value, When
 from orders.services import OrderStatusService
 from production.models import BoxMaker, BoxOrder, Printer, PrintingJob, TracingStudio, VendorPaymentStatus
 
@@ -45,7 +46,19 @@ class BoxOrderService:
     @staticmethod
     def get_box_orders_by_box_maker(box_maker_id):
         """Get box orders for a specific box maker with necessary relations"""
-        return BoxOrder.objects.filter(box_maker_id=box_maker_id).select_related("order_item", "order_item__order").order_by("-created_at")
+        # Order by vendor payment status: PENDING -> DELIVERED -> PAID, then newest first
+        status_order = Case(
+            When(box_maker_vendor_status=VendorPaymentStatus.PENDING, then=Value(0)),
+            When(box_maker_vendor_status=VendorPaymentStatus.DELIVERED, then=Value(1)),
+            When(box_maker_vendor_status=VendorPaymentStatus.PAID, then=Value(2)),
+            default=Value(3),
+            output_field=IntegerField(),
+        )
+        return (
+            BoxOrder.objects.filter(box_maker_id=box_maker_id)
+            .select_related("order_item", "order_item__order")
+            .order_by(status_order, "-created_at")
+        )
 
     @staticmethod
     def get_latest_by_order_item_id(order_item_id):
@@ -227,13 +240,35 @@ class PrintingJobService:
     @staticmethod
     def get_printing_jobs_by_printer(printer_id):
         """Get printing jobs assigned to a specific printer with necessary relations"""
-        return PrintingJob.objects.filter(printer_id=printer_id).select_related("order_item", "order_item__order").order_by("-created_at")
+        # Order by printer vendor payment status: PENDING -> DELIVERED -> PAID, then newest first
+        status_order = Case(
+            When(printer_vendor_status=VendorPaymentStatus.PENDING, then=Value(0)),
+            When(printer_vendor_status=VendorPaymentStatus.DELIVERED, then=Value(1)),
+            When(printer_vendor_status=VendorPaymentStatus.PAID, then=Value(2)),
+            default=Value(3),
+            output_field=IntegerField(),
+        )
+        return (
+            PrintingJob.objects.filter(printer_id=printer_id)
+            .select_related("order_item", "order_item__order")
+            .order_by(status_order, "-created_at")
+        )
 
     @staticmethod
     def get_printing_jobs_by_tracing_studio(tracing_studio_id):
         """Get printing jobs assigned to a specific tracing studio with necessary relations"""
+        # Order by tracing vendor payment status: PENDING -> DELIVERED -> PAID, then newest first
+        status_order = Case(
+            When(tracing_vendor_status=VendorPaymentStatus.PENDING, then=Value(0)),
+            When(tracing_vendor_status=VendorPaymentStatus.DELIVERED, then=Value(1)),
+            When(tracing_vendor_status=VendorPaymentStatus.PAID, then=Value(2)),
+            default=Value(3),
+            output_field=IntegerField(),
+        )
         return (
-            PrintingJob.objects.filter(tracing_studio_id=tracing_studio_id).select_related("order_item", "order_item__order").order_by("-created_at")
+            PrintingJob.objects.filter(tracing_studio_id=tracing_studio_id)
+            .select_related("order_item", "order_item__order")
+            .order_by(status_order, "-created_at")
         )
 
     @staticmethod
